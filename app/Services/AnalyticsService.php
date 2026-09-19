@@ -13,26 +13,30 @@ class AnalyticsService
     /**
      * Get high-level overview metrics for main dashboard.
      */
-    public function getOverviewMetrics(): array
+    public function getOverviewMetrics(?int $universityId = null): array
     {
-        $totalRespondents = Respondent::count();
-        $totalCompleted = RespondentSurvey::where('status', 'completed')->count();
+        $respQuery = Respondent::query();
+        $surveyQuery = RespondentSurvey::where('status', 'completed');
+
+        if ($universityId) {
+            $respQuery->where('university_id', $universityId);
+            $surveyQuery->whereHas('respondent', function ($q) use ($universityId) {
+                $q->where('university_id', $universityId);
+            });
+        }
+
+        $totalRespondents = $respQuery->count();
+        $totalCompleted = $surveyQuery->count();
         $completionRate = ($totalRespondents > 0) ? round(($totalCompleted / $totalRespondents) * 100, 1) : 0;
 
-        $cat1Count = Respondent::where('category_code', 'cat_1')->count();
-        $cat2Count = Respondent::where('category_code', 'cat_2')->count();
-        $cat3Count = Respondent::where('category_code', 'cat_3')->count();
-        $cat4Count = Respondent::where('category_code', 'cat_4')->count();
+        $cat1Count = (clone $respQuery)->where('category_code', 'cat_1')->count();
+        $cat2Count = (clone $respQuery)->where('category_code', 'cat_2')->count();
+        $cat3Count = (clone $respQuery)->where('category_code', 'cat_3')->count();
+        $cat4Count = (clone $respQuery)->where('category_code', 'cat_4')->count();
 
-        $todaySubmissions = RespondentSurvey::where('status', 'completed')
-            ->whereDate('completed_at', now()->today())
-            ->count();
-        $weekSubmissions = RespondentSurvey::where('status', 'completed')
-            ->where('completed_at', '>=', now()->subDays(7))
-            ->count();
-        $monthSubmissions = RespondentSurvey::where('status', 'completed')
-            ->where('completed_at', '>=', now()->subDays(30))
-            ->count();
+        $todaySubmissions = (clone $surveyQuery)->whereDate('completed_at', now()->today())->count();
+        $weekSubmissions = (clone $surveyQuery)->where('completed_at', '>=', now()->subDays(7))->count();
+        $monthSubmissions = (clone $surveyQuery)->where('completed_at', '>=', now()->subDays(30))->count();
 
         $avgReadiness = RespondentScore::whereNull('dimension_id')->avg('score') ?? 72.4;
         $avgAiReadiness = 64.8;
@@ -60,15 +64,20 @@ class AnalyticsService
     /**
      * Get datasets formatted for Chart.js graphics.
      */
-    public function getChartData(): array
+    public function getChartData(?int $universityId = null): array
     {
+        $respQuery = Respondent::query();
+        if ($universityId) {
+            $respQuery->where('university_id', $universityId);
+        }
+
         $categoryDonut = [
             'labels' => ['Working Alumni', 'Job-Seeking Alumni', 'Current Students', 'Interrupted Students'],
             'data' => [
-                Respondent::where('category_code', 'cat_1')->count(),
-                Respondent::where('category_code', 'cat_2')->count(),
-                Respondent::where('category_code', 'cat_3')->count(),
-                Respondent::where('category_code', 'cat_4')->count(),
+                (clone $respQuery)->where('category_code', 'cat_1')->count(),
+                (clone $respQuery)->where('category_code', 'cat_2')->count(),
+                (clone $respQuery)->where('category_code', 'cat_3')->count(),
+                (clone $respQuery)->where('category_code', 'cat_4')->count(),
             ],
             'backgroundColor' => ['#1e40af', '#0d9488', '#d97706', '#dc2626'],
         ];
@@ -99,9 +108,13 @@ class AnalyticsService
     /**
      * Perform cross-analysis filter query.
      */
-    public function runCrossAnalysis(array $filters): array
+    public function runCrossAnalysis(array $filters, ?int $universityId = null): array
     {
         $query = Respondent::query();
+
+        if ($universityId) {
+            $query->where('university_id', $universityId);
+        }
 
         if (!empty($filters['category_code'])) {
             $query->where('category_code', $filters['category_code']);

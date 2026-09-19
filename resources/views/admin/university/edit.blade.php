@@ -1,32 +1,64 @@
 @extends('layouts.admin')
 
-@section('title', 'University Profile & Branding Settings')
+@section('title', 'Institution Profile & Branding Settings')
 
 @section('content')
 <div class="container-fluid" style="max-width: 950px;">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="fw-bold text-dark mb-1">University Profile & Branding Configurator</h4>
-            <p class="text-secondary small mb-0">Configure university identity, accent colors, survey header, and footer text without code edits.</p>
+            <h4 class="fw-bold text-dark mb-1">Institution Profile & Branding Configurator</h4>
+            <p class="text-secondary small mb-0">Configure institution identity, classification, accent colors, survey header, and branding text.</p>
         </div>
+        @if(auth()->user() && auth()->user()->isSuperAdmin())
+            <a href="{{ route('admin.university.index') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Back to Directory
+            </a>
+        @endif
     </div>
 
     <div class="card-custom p-4">
-        <form action="{{ route('admin.university.update') }}" method="POST" enctype="multipart/form-data">
+        <form action="{{ route('admin.university.update', $university->id) }}" method="POST" enctype="multipart/form-data">
             @csrf
+            <input type="hidden" name="university_id" value="{{ $university->id }}">
 
-            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="bi bi-building me-2 text-primary"></i> Basic Identity</h6>
+            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="bi bi-building me-2 text-primary"></i> Basic Identity & Classification</h6>
             <div class="row g-3 mb-4">
                 <div class="col-md-8">
-                    <label class="form-label fw-semibold">University Name <span class="text-danger">*</span></label>
+                    <label class="form-label fw-semibold">Institution Name <span class="text-danger">*</span></label>
                     <input type="text" name="name" class="form-control" value="{{ old('name', $university->name) }}" required>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label fw-semibold">Short Name <span class="text-danger">*</span></label>
+                    <label class="form-label fw-semibold">Short Name / Code <span class="text-danger">*</span></label>
                     <input type="text" name="short_name" class="form-control" value="{{ old('short_name', $university->short_name) }}" required>
                 </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Institution Classification Type <span class="text-danger">*</span></label>
+                    <select name="type" id="edit_type_select" class="form-select border-primary" required onchange="toggleParentUniEdit(this.value)">
+                        <option value="ini" {{ old('type', $university->type) === 'ini' ? 'selected' : '' }}>Institute of National Importance (IIT / NIT / IIM / AIIMS)</option>
+                        <option value="university" {{ old('type', $university->type) === 'university' ? 'selected' : '' }}>Central / State University</option>
+                        <option value="autonomous_college" {{ old('type', $university->type) === 'autonomous_college' ? 'selected' : '' }}>Autonomous College (Independent Academic Autonomy)</option>
+                        <option value="affiliated_college" {{ old('type', $university->type) === 'affiliated_college' ? 'selected' : '' }}>Affiliated College (Works Under Parent University)</option>
+                        <option value="polytechnic_iti" {{ old('type', $university->type) === 'polytechnic_iti' ? 'selected' : '' }}>Polytechnic & ITI (Technical / Skill Institute)</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6" id="edit_parent_container" style="{{ old('type', $university->type) === 'affiliated_college' ? 'display:block;' : 'display:none;' }}">
+                    <label class="form-label fw-semibold">Affiliated Parent University</label>
+                    <select name="parent_id" class="form-select border-primary">
+                        <option value="">-- Select Parent University --</option>
+                        @if(isset($parentUniversities))
+                            @foreach($parentUniversities as $pUni)
+                                <option value="{{ $pUni->id }}" {{ old('parent_id', $university->parent_id) == $pUni->id ? 'selected' : '' }}>
+                                    {{ $pUni->name }} ({{ $pUni->short_name }})
+                                </option>
+                            @endforeach
+                        @endif
+                    </select>
+                </div>
+
                 <div class="col-md-12">
-                    <label class="form-label fw-semibold">University Tagline / Subtitle</label>
+                    <label class="form-label fw-semibold">Tagline / Mission Statement</label>
                     <input type="text" name="tagline" class="form-control" value="{{ old('tagline', $university->tagline) }}">
                 </div>
                 <div class="col-md-6">
@@ -52,15 +84,15 @@
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Primary Accent Color</label>
                     <div class="d-flex gap-2">
-                        <input type="color" name="primary_color" class="form-control form-control-color" value="{{ old('primary_color', $university->primary_color) }}">
-                        <input type="text" class="form-control" value="{{ old('primary_color', $university->primary_color) }}" readonly>
+                        <input type="color" name="primary_color" class="form-control form-control-color" value="{{ old('primary_color', $university->primary_color ?? '#1e40af') }}">
+                        <input type="text" class="form-control" value="{{ old('primary_color', $university->primary_color ?? '#1e40af') }}" readonly>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Secondary Accent Color</label>
                     <div class="d-flex gap-2">
-                        <input type="color" name="secondary_color" class="form-control form-control-color" value="{{ old('secondary_color', $university->secondary_color) }}">
-                        <input type="text" class="form-control" value="{{ old('secondary_color', $university->secondary_color) }}" readonly>
+                        <input type="color" name="secondary_color" class="form-control form-control-color" value="{{ old('secondary_color', $university->secondary_color ?? '#0f766e') }}">
+                        <input type="text" class="form-control" value="{{ old('secondary_color', $university->secondary_color ?? '#0f766e') }}" readonly>
                     </div>
                 </div>
             </div>
@@ -83,10 +115,21 @@
 
             <div class="d-flex justify-content-end">
                 <button type="submit" class="btn btn-primary-custom px-4">
-                    <i class="bi bi-check-circle me-1"></i> Save University Settings
+                    <i class="bi bi-check-circle me-1"></i> Save Institution Settings
                 </button>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+function toggleParentUniEdit(type) {
+    const parentContainer = document.getElementById('edit_parent_container');
+    if (type === 'affiliated_college') {
+        parentContainer.style.display = 'block';
+    } else {
+        parentContainer.style.display = 'none';
+    }
+}
+</script>
 @endsection

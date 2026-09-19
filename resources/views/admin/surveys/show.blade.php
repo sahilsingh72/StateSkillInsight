@@ -18,12 +18,6 @@
     </div>
 </div>
 
-@if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show rounded-3 mb-4" role="alert">
-        <i class="bi bi-check-circle me-1"></i> {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-@endif
 
 @if(isset($errors) && $errors->any())
     <div class="alert alert-danger alert-dismissible fade show rounded-3 mb-4" role="alert">
@@ -43,9 +37,6 @@
             <h6 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="bi bi-gear me-2 text-primary"></i> Survey Settings</h6>
             <div class="small mb-3">
                 <strong>Target:</strong> {{ $survey->target_respondents ?? 'All Respondents' }}
-            </div>
-            <div class="small mb-3">
-                <strong>Completion Time:</strong> {{ $survey->estimated_completion_time }} mins
             </div>
             <div class="small mb-3">
                 <strong>Voice Answers Enabled:</strong> {{ $survey->enable_voice ? 'Yes' : 'No' }}
@@ -92,9 +83,6 @@
                                     <i class="bi {{ $cat->icon ?? 'bi-folder' }} me-2 text-primary"></i>
                                     <span class="fw-bold text-dark me-2">{{ $cat->name }}</span>
                                     <span class="badge bg-light text-secondary border me-2">{{ $cat->sections->count() }} Sections</span>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-primary text-nowrap me-2" onclick="openAddSectionModal({{ $cat->id }}, '{{ addslashes($cat->name) }}')">
-                                    <i class="bi bi-plus-circle me-1"></i> Add Section
                                 </button>
                             </h2>
                             <div id="cat_collapse_{{ $cat->id }}" class="accordion-collapse collapse {{ $cIdx == 0 ? 'show' : '' }}" data-bs-parent="#categoryAccordion">
@@ -166,38 +154,65 @@
     </div>
 </div>
 
-<!-- Add Category Modal -->
+<!-- Configure Categories Modal -->
 <div class="modal fade" id="addCategoryModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content rounded-4 border-0 shadow">
-            <form action="{{ route('admin.categories.store') }}" method="POST">
+            <form action="{{ route('admin.surveys.categories.sync', $survey->id) }}" method="POST">
                 @csrf
-                <input type="hidden" name="survey_id" value="{{ $survey->id }}">
                 <div class="modal-header border-bottom">
-                    <h5 class="modal-header-title fw-bold text-dark mb-0"><i class="bi bi-folder-plus text-primary me-2"></i> Add Category to Survey</h5>
+                    <h5 class="modal-header-title fw-bold text-dark mb-0"><i class="bi bi-layers text-primary me-2"></i> Configure Categories for Survey</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Category Name <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control" placeholder="e.g. Working Alumni / Students / General" required>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <span class="fw-bold text-dark">Select Existing Categories from Engine</span>
+                            <p class="text-secondary small mb-0">Check categories to assign to this survey. Uncheck to deselect/remove from this survey.</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAllCategories(true)">
+                                <i class="bi bi-check-all me-1"></i> Select All
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAllCategories(false)">
+                                <i class="bi bi-x-circle me-1"></i> Deselect All
+                            </button>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Category Code (Optional)</label>
-                        <input type="text" name="code" class="form-control" placeholder="e.g. CAT-01 (Auto-generated if blank)">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Description</label>
-                        <textarea name="description" class="form-control" rows="3" placeholder="Brief description of target audience or section focus"></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Estimated Minutes</label>
-                        <input type="number" name="estimated_minutes" class="form-control" value="10" min="1">
+
+                    <div class="row g-3">
+                        @if(isset($masterCategories) && count($masterCategories) > 0)
+                            @foreach($masterCategories as $masterCat)
+                                @php $isSelected = $survey->categories->contains('id', $masterCat->id); @endphp
+                                <div class="col-md-6">
+                                    <label class="card h-100 p-3 cursor-pointer border rounded-3 transition-all {{ $isSelected ? 'border-primary bg-primary-subtle' : 'border-light-subtle bg-white' }}" style="cursor: pointer;">
+                                        <div class="d-flex align-items-start gap-3">
+                                            <input class="form-check-input flex-shrink-0 category-checkbox mt-1 fs-5" type="checkbox" name="category_ids[]" value="{{ $masterCat->id }}" {{ $isSelected ? 'checked' : '' }}>
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                                    <span class="fw-bold text-dark">
+                                                        <i class="bi {{ $masterCat->icon ?? 'bi-folder' }} text-primary me-1"></i> {{ $masterCat->name }}
+                                                    </span>
+                                                    <span class="badge bg-light text-secondary border">{{ $masterCat->code }}</span>
+                                                </div>
+                                                @if($masterCat->description)
+                                                    <p class="small text-secondary mb-0">{{ Str::limit($masterCat->description, 75) }}</p>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            @endforeach
+                        @else
+                            <div class="col-12 text-center py-4 text-muted">
+                                No master categories found in Category Engine. Please create categories in <a href="{{ route('admin.categories.index') }}">Category Engine</a> first.
+                            </div>
+                        @endif
                     </div>
                 </div>
                 <div class="modal-footer border-top px-4 py-3">
                     <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary-custom px-4"><i class="bi bi-check-circle me-1"></i> Save Category</button>
+                    <button type="submit" class="btn btn-primary-custom px-4"><i class="bi bi-check-circle me-1"></i> Save Configured Categories</button>
                 </div>
             </form>
         </div>
@@ -236,6 +251,12 @@
 
 @push('scripts')
 <script>
+    function selectAllCategories(select) {
+        document.querySelectorAll('.category-checkbox').forEach(cb => {
+            cb.checked = select;
+        });
+    }
+
     function openAddSectionModal(categoryId, categoryName) {
         document.getElementById('modal_category_id').value = categoryId;
         document.getElementById('modal_category_name').innerText = categoryName;

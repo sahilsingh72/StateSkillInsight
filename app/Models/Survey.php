@@ -46,7 +46,7 @@ class Survey extends Model
 
     public function categories()
     {
-        return $this->hasMany(SurveyCategory::class)->orderBy('order');
+        return $this->belongsToMany(SurveyCategory::class, 'survey_category_survey', 'survey_id', 'survey_category_id')->orderBy('order');
     }
 
     public function psychometricDimensions()

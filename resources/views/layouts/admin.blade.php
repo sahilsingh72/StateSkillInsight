@@ -191,7 +191,7 @@
                 <i class="bi bi-briefcase"></i> Working Alumni
             </a>
             <a href="{{ route('admin.analytics.category2') }}" class="nav-link {{ request()->routeIs('admin.analytics.category2') ? 'active' : '' }}">
-                <i class="bi bi-person-search"></i> Job-Seeking Alumni
+                <i class="bi bi-person-vcard"></i> Job-Seeking Alumni
             </a>
             <a href="{{ route('admin.analytics.category3') }}" class="nav-link {{ request()->routeIs('admin.analytics.category3') ? 'active' : '' }}">
                 <i class="bi bi-mortarboard"></i> Current Students
@@ -223,24 +223,36 @@
                     <i class="bi bi-diagram-3"></i> Institutions & Colleges
                 </a>
             @endif
-            <a href="{{ route('admin.university.edit') }}" class="nav-link {{ request()->routeIs('admin.university.edit') ? 'active' : '' }}">
-                <i class="bi bi-building"></i> Institution Profile
-            </a>
-            <a href="{{ route('admin.users.index') }}" class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
-                <i class="bi bi-shield-lock"></i> Users & Roles
-            </a>
-            <a href="{{ route('admin.audit_logs.index') }}" class="nav-link {{ request()->routeIs('admin.audit_logs.*') ? 'active' : '' }}">
-                <i class="bi bi-clock-history"></i> Audit Logs
-            </a>
+            @if(auth()->check() && auth()->user()->hasRole('university_admin'))
+                <a href="{{ route('admin.university.edit') }}" class="nav-link {{ request()->routeIs('admin.university.edit') ? 'active' : '' }}">
+                    <i class="bi bi-building"></i> University Profile & Branding
+                </a>
+            @endif
+            @if(auth()->check() && auth()->user()->isUniversityAdmin())
+                <a href="{{ route('admin.users.index') }}" class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
+                    <i class="bi bi-shield-lock"></i> Users & Roles
+                </a>
+            @endif
+            @if(auth()->check() && auth()->user()->isSuperAdmin())
+                <a href="{{ route('admin.audit_logs.index') }}" class="nav-link {{ request()->routeIs('admin.audit_logs.*') ? 'active' : '' }}">
+                    <i class="bi bi-clock-history"></i> Audit Logs
+                </a>
+            @endif
         </div>
     </div>
 
     <!-- Topbar -->
     <div class="topbar">
         <div class="d-flex align-items-center gap-3">
-            <span class="badge bg-light text-secondary border">
-                <i class="bi bi-building me-1"></i> {{ auth()->user()->university->name ?? 'System-Wide Administration' }}
-            </span>
+            @if(auth()->check() && auth()->user()->isSuperAdmin())
+                <span class="badge bg-primary text-white border shadow-2xs py-2 px-3">
+                    <i class="bi bi-shield-lock me-1"></i> Global System Administrator (Software Apex Control)
+                </span>
+            @else
+                <span class="badge bg-light text-secondary border py-2 px-3">
+                    <i class="bi bi-building me-1"></i> {{ auth()->user()->university->name ?? 'Institutional Portal' }}
+                </span>
+            @endif
         </div>
         <div class="d-flex align-items-center gap-3">
             <a href="{{ route('survey.landing') }}" target="_blank" class="btn btn-sm btn-outline-secondary">
@@ -250,13 +262,28 @@
                 <button class="btn btn-sm btn-light border dropdown-toggle" type="button" data-bs-toggle="dropdown">
                     <i class="bi bi-person-circle me-1"></i> {{ auth()->user()->name ?? 'User' }} ({{ strtoupper(auth()->user()->roleRelation->display_name ?? auth()->user()->roleRelation->name ?? 'Admin') }})
                 </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="{{ route('admin.university.edit') }}">Institution Profile</a></li>
-                    <li><hr class="dropdown-divider"></li>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                    @if(auth()->check() && auth()->user()->isSuperAdmin())
+                        <li>
+                            <a class="dropdown-item" href="{{ route('admin.university.index') }}">
+                                <i class="bi bi-diagram-3 me-2 text-primary"></i> Institutions Directory & Enrollment
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                    @elseif(auth()->check() && auth()->user()->hasRole('university_admin'))
+                        <li>
+                            <a class="dropdown-item" href="{{ route('admin.university.edit') }}">
+                                <i class="bi bi-building me-2 text-primary"></i> University Profile & Branding
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                    @endif
                     <li>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
-                            <button type="submit" class="dropdown-item text-danger">Logout</button>
+                            <button type="submit" class="dropdown-item text-danger">
+                                <i class="bi bi-box-arrow-right me-2"></i> Logout
+                            </button>
                         </form>
                     </li>
                 </ul>

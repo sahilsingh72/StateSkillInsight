@@ -15,13 +15,14 @@ class SectionController extends Controller
             'category_id' => 'required|exists:survey_categories,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'order' => 'integer|min:1',
+            'order' => 'nullable|integer|min:1',
         ]);
 
         $section = SurveySection::create($validated);
+        $categoryName = $section->category->name ?? 'Category';
         AuditLog::log('created_section', 'SurveySection', $section->id);
 
-        return back()->with('success', 'Section added successfully!');
+        return back()->with('success', 'New section ("'.$section->title.'") created under category "'.$categoryName.'" successfully!');
     }
 
     public function update(Request $request, SurveySection $section)

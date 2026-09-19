@@ -30,10 +30,6 @@
                     <input type="text" name="target_respondents" class="form-control" value="All Students & Alumni">
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold">Estimated Completion Time (mins)</label>
-                    <input type="number" name="estimated_completion_time" class="form-control" value="15" required>
-                </div>
-                <div class="col-md-6">
                     <label class="form-label fw-semibold">Status</label>
                     <select name="status" class="form-select">
                         <option value="draft">Draft</option>

@@ -42,6 +42,12 @@ class SurveyService
                         $newOpt->question_id = $newQ->id;
                         $newOpt->save();
                     }
+
+                    foreach ($q->translations as $trans) {
+                        $newTrans = $trans->replicate();
+                        $newTrans->question_id = $newQ->id;
+                        $newTrans->save();
+                    }
                 }
             }
         }

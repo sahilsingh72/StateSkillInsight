@@ -13,8 +13,20 @@ class InvitationController extends Controller
 {
     public function index()
     {
-        $invitations = SurveyInvitation::with('survey')->latest()->paginate(20);
-        $surveys = Survey::all();
+        $user = auth()->user();
+        $invQuery = SurveyInvitation::with('survey');
+        $surveyQuery = Survey::query();
+
+        if ($user && !$user->isSuperAdmin()) {
+            $uniId = $user->university_id;
+            $invQuery->whereHas('survey', function ($q) use ($uniId) {
+                $q->where('university_id', $uniId);
+            });
+            $surveyQuery->where('university_id', $uniId);
+        }
+
+        $invitations = $invQuery->latest()->paginate(20);
+        $surveys = $surveyQuery->get();
 
         return view('admin.invitations.index', compact('invitations', 'surveys'));
     }

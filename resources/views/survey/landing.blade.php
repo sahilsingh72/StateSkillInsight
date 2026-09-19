@@ -33,7 +33,7 @@
             <div><i class="bi bi-arrow-right text-muted fs-4"></i></div>
             <div><strong class="text-warning">3. Current Students</strong> <br><small class="text-muted">Pre-Graduation Readiness</small></div>
             <div><i class="bi bi-arrow-right text-muted fs-4"></i></div>
-            <div><strong class="text-danger">4. Interrupted Students</strong> <br><small class="text-muted">Re-engagement Pathways</small></div>
+            <div><strong class="text-danger">4. Dropped-out Students</strong> <br><small class="text-muted">Re-engagement Pathways</small></div>
         </div>
     </div>
 
@@ -48,13 +48,9 @@
                         </div>
                         <h5 class="fw-bold text-dark mb-2">{{ $cat->name }}</h5>
                         <p class="text-secondary small mb-3">{{ $cat->description }}</p>
-                        
-                        <div class="badge bg-light text-secondary border mb-3">
-                            <i class="bi bi-clock me-1"></i> {{ $cat->estimated_minutes ?? 15 }} mins
-                        </div>
                     </div>
                     <a href="{{ route('survey.register', $cat->code) }}" class="btn btn-uni-primary w-100">
-                        Start {{ $cat->name }} <i class="bi bi-chevron-right ms-1"></i>
+                        Start The Survey <i class="bi bi-chevron-right ms-1"></i>
                     </a>
                 </div>
             </div>

@@ -72,5 +72,45 @@ class UniversitySeeder extends Seeder
                 'is_active' => true,
             ]
         );
+
+        // Institute of National Importance (INI)
+        University::firstOrCreate(
+            ['short_name' => 'IIT-BBSR'],
+            [
+                'name' => 'Indian Institute of Technology (IIT)',
+                'type' => 'ini',
+                'parent_id' => null,
+                'tagline' => 'Institute of National Importance (Autonomous Premier Engineering & Technology Institute)',
+                'website' => 'https://www.iit.ac.in',
+                'email' => 'contact@iit.ac.in',
+                'phone' => '+91 (0674) 235-0040',
+                'address' => 'Argul, Jatni, State - 752050',
+                'state' => 'State Region',
+                'country' => 'India',
+                'primary_color' => '#b91c1c',
+                'secondary_color' => '#c2410c',
+                'is_active' => true,
+            ]
+        );
+
+        // Polytechnic & ITI Skill Development Institute
+        University::firstOrCreate(
+            ['short_name' => 'SGPI'],
+            [
+                'name' => 'State Government Polytechnic & ITI Skill Institute',
+                'type' => 'polytechnic_iti',
+                'parent_id' => null,
+                'tagline' => 'Premier Technical Skill & Vocational Diploma Institute',
+                'website' => 'https://www.statepolytechnic.edu.in',
+                'email' => 'info@statepolytechnic.edu.in',
+                'phone' => '+91 (0674) 235-0050',
+                'address' => 'Skill City Campus, State - 751005',
+                'state' => 'State Region',
+                'country' => 'India',
+                'primary_color' => '#15803d',
+                'secondary_color' => '#047857',
+                'is_active' => true,
+            ]
+        );
     }
 }

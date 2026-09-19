@@ -21,7 +21,6 @@
                     <th>Survey Title</th>
                     <th>Status</th>
                     <th>Categories</th>
-                    <th>Completion Time</th>
                     <th>Version</th>
                     <th>Actions</th>
                 </tr>
@@ -39,7 +38,6 @@
                         <td>
                             <span class="badge bg-light text-primary border">{{ $s->categories->count() }} Categories</span>
                         </td>
-                        <td>{{ $s->estimated_completion_time }} mins</td>
                         <td>v{{ $s->version }}</td>
                         <td>
                             <div class="btn-group btn-group-sm">

@@ -65,7 +65,7 @@ class SurveySeeder extends Seeder
                 'opening_message' => 'We want to understand the real recruitment barriers graduates face to provide targeted skill bridges and employer connect.',
                 'eligibility' => 'Graduated from UG/PG programme and actively searching for employment or career transition.',
                 'order' => 2,
-                'icon' => 'bi-person-search',
+                'icon' => 'bi-person-vcard',
                 'estimated_minutes' => 15,
             ],
             [

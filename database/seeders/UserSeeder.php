@@ -18,11 +18,11 @@ class UserSeeder extends Seeder
         $uniAdminRole = Role::where('name', 'university_admin')->first();
         $analystRole = Role::where('name', 'analyst')->first();
 
-        // Super Admin
+        // Super Admin (Global System Administration - Not tied to any university or college)
         User::firstOrCreate(
             ['email' => 'superadmin@system.edu'],
             [
-                'university_id' => $uni->id,
+                'university_id' => null,
                 'name' => 'System Super Admin',
                 'mobile' => '9876543210',
                 'password' => Hash::make('password'),

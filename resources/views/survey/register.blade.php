@@ -21,18 +21,54 @@
 
             <div class="row g-3 mb-4">
                 <div class="col-md-12">
-                    <label class="form-label fw-semibold">Select Your University / College <span class="text-danger">*</span></label>
+                    <label class="form-label fw-semibold">Select Your University / College / Institute <span class="text-danger">*</span></label>
                     <select name="university_id" class="form-select border-primary" required>
-                        <option value="">-- Choose Your Institution or Autonomous College --</option>
-                        @foreach($institutions as $inst)
-                            <option value="{{ $inst->id }}">
-                                {{ $inst->name }} 
-                                @if($inst->type === 'autonomous_college')(Autonomous College)
-                                @elseif($inst->type === 'affiliated_college')(Affiliated College)
-                                @else(University)
-                                @endif
-                            </option>
-                        @endforeach
+                        <option value="">-- Select Your Institution / College --</option>
+                        
+                        @php $inis = $institutions->where('type', 'ini'); @endphp
+                        @if($inis->count() > 0)
+                            <optgroup label="Institutes of National Importance (IIT / NIT / IIM / AIIMS)">
+                                @foreach($inis as $inst)
+                                    <option value="{{ $inst->id }}">{{ $inst->name }} ({{ $inst->short_name }})</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+
+                        @php $unis = $institutions->where('type', 'university'); @endphp
+                        @if($unis->count() > 0)
+                            <optgroup label="Central & State Universities">
+                                @foreach($unis as $inst)
+                                    <option value="{{ $inst->id }}">{{ $inst->name }} ({{ $inst->short_name }})</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+
+                        @php $autonomies = $institutions->where('type', 'autonomous_college'); @endphp
+                        @if($autonomies->count() > 0)
+                            <optgroup label="Autonomous Colleges">
+                                @foreach($autonomies as $inst)
+                                    <option value="{{ $inst->id }}">{{ $inst->name }} (Autonomous)</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+
+                        @php $affiliateds = $institutions->where('type', 'affiliated_college'); @endphp
+                        @if($affiliateds->count() > 0)
+                            <optgroup label="Affiliated Colleges (Under Parent University)">
+                                @foreach($affiliateds as $inst)
+                                    <option value="{{ $inst->id }}">{{ $inst->name }} {{ $inst->parent ? '(Affiliated to '.$inst->parent->short_name.')' : '' }}</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+
+                        @php $polytechnics = $institutions->where('type', 'polytechnic_iti'); @endphp
+                        @if($polytechnics->count() > 0)
+                            <optgroup label="Polytechnics & ITIs (Skill & Technical Institutes)">
+                                @foreach($polytechnics as $inst)
+                                    <option value="{{ $inst->id }}">{{ $inst->name }} (Polytechnic / ITI)</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
                     </select>
                 </div>
                 <div class="col-md-6">
@@ -102,7 +138,7 @@
                     <i class="bi bi-arrow-left me-1"></i> Back
                 </a>
                 <button type="submit" class="btn btn-uni-primary px-4">
-                    Begin Questionnaire <i class="bi bi-arrow-right ms-1"></i>
+                    Start The Survey <i class="bi bi-arrow-right ms-1"></i>
                 </button>
             </div>
         </form>

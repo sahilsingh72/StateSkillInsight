@@ -37,10 +37,11 @@ class QuestionController extends Controller
     public function create(Request $request)
     {
         $sections = SurveySection::with('category')->get();
+        $categories = SurveyCategory::all();
         $dimensions = PsychometricDimension::all();
         $selectedSectionId = $request->query('section_id');
 
-        return view('admin.questions.create', compact('sections', 'dimensions', 'selectedSectionId'));
+        return view('admin.questions.create', compact('sections', 'categories', 'dimensions', 'selectedSectionId'));
     }
 
     public function store(Request $request)

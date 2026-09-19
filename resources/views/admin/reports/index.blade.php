@@ -29,7 +29,7 @@
     </div>
     <div class="col-md-4">
         <div class="card-custom p-4 text-center h-100">
-            <i class="bi bi-person-search fs-1 text-teal mb-2" style="color:var(--uni-secondary);"></i>
+            <i class="bi bi-person-vcard fs-1 text-teal mb-2" style="color:var(--uni-secondary);"></i>
             <h5 class="fw-bold text-dark">Category 2: Employability Gap Report</h5>
             <p class="small text-secondary mb-3">Job search barriers, interview conversion, and skill gap findings.</p>
             <a href="{{ route('admin.reports.view', 'category2') }}" class="btn btn-outline-secondary btn-sm w-100" target="_blank">Generate Report</a>

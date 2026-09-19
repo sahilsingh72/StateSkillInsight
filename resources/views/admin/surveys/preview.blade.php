@@ -80,7 +80,6 @@
         @endif
 
         <div class="d-flex flex-wrap gap-4 pt-3 border-top text-muted small">
-            <div><i class="bi bi-clock me-1 text-primary"></i> Est. Time: <strong>{{ $survey->estimated_completion_time }} mins</strong></div>
             <div><i class="bi bi-people me-1 text-primary"></i> Target: <strong>{{ $survey->target_respondents ?? 'All Users' }}</strong></div>
             <div><i class="bi bi-mic me-1 text-primary"></i> Voice Enabled: <strong>{{ $survey->enable_voice ? 'Yes' : 'No' }}</strong></div>
             <div><i class="bi bi-shield-check me-1 text-primary"></i> Anonymous: <strong>{{ $survey->allow_anonymous ? 'Yes' : 'No' }}</strong></div>

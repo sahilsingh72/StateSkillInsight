@@ -31,6 +31,11 @@ class SurveyCategory extends Model
         return $this->belongsTo(Survey::class);
     }
 
+    public function surveys()
+    {
+        return $this->belongsToMany(Survey::class, 'survey_category_survey', 'survey_category_id', 'survey_id');
+    }
+
     public function sections()
     {
         return $this->hasMany(SurveySection::class, 'category_id')->orderBy('order');

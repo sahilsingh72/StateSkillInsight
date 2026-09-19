@@ -19,41 +19,65 @@ class AnalyticsController extends Controller
         $this->analyticsService = $analyticsService;
     }
 
+    private function getUniId(): ?int
+    {
+        $user = auth()->user();
+        return ($user && !$user->isSuperAdmin()) ? $user->university_id : null;
+    }
+
     public function overview()
     {
-        $metrics = $this->analyticsService->getOverviewMetrics();
-        $chartData = $this->analyticsService->getChartData();
+        $uniId = $this->getUniId();
+        $metrics = $this->analyticsService->getOverviewMetrics($uniId);
+        $chartData = $this->analyticsService->getChartData($uniId);
         return view('admin.analytics.overview', compact('metrics', 'chartData'));
     }
 
     public function category1()
     {
-        $respondents = Respondent::where('category_code', 'cat_1')->paginate(15);
+        $query = Respondent::where('category_code', 'cat_1');
+        if ($uniId = $this->getUniId()) {
+            $query->where('university_id', $uniId);
+        }
+        $respondents = $query->paginate(15);
         return view('admin.analytics.category1', compact('respondents'));
     }
 
     public function category2()
     {
-        $respondents = Respondent::where('category_code', 'cat_2')->paginate(15);
+        $query = Respondent::where('category_code', 'cat_2');
+        if ($uniId = $this->getUniId()) {
+            $query->where('university_id', $uniId);
+        }
+        $respondents = $query->paginate(15);
         return view('admin.analytics.category2', compact('respondents'));
     }
 
     public function category3()
     {
-        $respondents = Respondent::where('category_code', 'cat_3')->paginate(15);
+        $query = Respondent::where('category_code', 'cat_3');
+        if ($uniId = $this->getUniId()) {
+            $query->where('university_id', $uniId);
+        }
+        $respondents = $query->paginate(15);
         return view('admin.analytics.category3', compact('respondents'));
     }
 
     public function category4()
     {
-        $respondents = Respondent::where('category_code', 'cat_4')->paginate(15);
+        $query = Respondent::where('category_code', 'cat_4');
+        if ($uniId = $this->getUniId()) {
+            $query->where('university_id', $uniId);
+        }
+        $respondents = $query->paginate(15);
         return view('admin.analytics.category4', compact('respondents'));
     }
 
     public function crossAnalysis(Request $request)
     {
         $filters = $request->only(['category_code', 'programme', 'department', 'graduation_year']);
-        $analysisResult = $this->analyticsService->runCrossAnalysis($filters);
+        $uniId = $this->getUniId();
+        $analysisResult = $this->analyticsService->runCrossAnalysis($filters, $uniId);
 
         return view('admin.analytics.cross_analysis', compact('analysisResult', 'filters'));
     }
@@ -71,7 +95,13 @@ class AnalyticsController extends Controller
 
     public function interventions()
     {
-        $interventions = RespondentIntervention::with(['rule', 'respondentSurvey.respondent'])->paginate(20);
+        $query = RespondentIntervention::with(['rule', 'respondentSurvey.respondent']);
+        if ($uniId = $this->getUniId()) {
+            $query->whereHas('respondentSurvey.respondent', function ($q) use ($uniId) {
+                $q->where('university_id', $uniId);
+            });
+        }
+        $interventions = $query->paginate(20);
         $rules = InterventionRule::all();
 
         return view('admin.analytics.interventions', compact('interventions', 'rules'));

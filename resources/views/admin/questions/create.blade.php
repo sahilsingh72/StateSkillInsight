@@ -13,7 +13,12 @@
         <form action="{{ route('admin.questions.store') }}" method="POST">
             @csrf
             <div class="mb-3">
-                <label class="form-label fw-semibold">Target Category & Section <span class="text-danger">*</span></label>
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label class="form-label fw-semibold mb-0">Target Category & Section <span class="text-danger">*</span></label>
+                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" data-bs-toggle="modal" data-bs-target="#createSectionModal">
+                        <i class="bi bi-plus-circle me-1"></i> Create New Section
+                    </button>
+                </div>
                 <select name="section_id" class="form-select" required>
                     @foreach($sections as $sec)
                         <option value="{{ $sec->id }}" {{ (isset($selectedSectionId) && $selectedSectionId == $sec->id) ? 'selected' : '' }}>
@@ -67,6 +72,47 @@
                 <button type="submit" class="btn btn-primary-custom px-4"><i class="bi bi-check-circle me-1"></i> Save Question</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Modal: Create New Section in Category -->
+<div class="modal fade" id="createSectionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <form action="{{ route('admin.sections.store') }}" method="POST">
+                @csrf
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold text-dark"><i class="bi bi-folder-plus text-primary me-2"></i> Add New Section to Category</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Choose Target Category <span class="text-danger">*</span></label>
+                        <select name="category_id" class="form-select border-primary" required>
+                            <option value="">-- Select Category --</option>
+                            @if(isset($categories))
+                                @foreach($categories as $cat)
+                                    <option value="{{ $cat->id }}">{{ $cat->name }} ({{ $cat->code }})</option>
+                                @endforeach
+                            @endif
+                        </select>
+                        <small class="text-muted d-block mt-1">Select the category in which this new section will be created.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Section Title <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control" placeholder="e.g. Technical Skills / Practical Experience" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Description</label>
+                        <textarea name="description" class="form-control" rows="3" placeholder="Section guidelines or scope"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-top px-4 py-3">
+                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary-custom px-4"><i class="bi bi-check-circle me-1"></i> Save Section</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 @endsection

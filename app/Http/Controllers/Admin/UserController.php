@@ -16,7 +16,11 @@ class UserController extends Controller
     {
         $currentUser = auth()->user();
 
-        if ($currentUser && $currentUser->isSuperAdmin()) {
+        if (!$currentUser || !$currentUser->isUniversityAdmin()) {
+            abort(403, 'Unauthorized access.');
+        }
+
+        if ($currentUser->isSuperAdmin()) {
             $users = User::with(['university', 'roleRelation'])->latest()->paginate(15);
             $roles = Role::all();
             $universities = University::all();
@@ -39,6 +43,10 @@ class UserController extends Controller
     {
         $currentUser = auth()->user();
 
+        if (!$currentUser || !$currentUser->isUniversityAdmin()) {
+            abort(403, 'Unauthorized access.');
+        }
+
         $rules = [
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
@@ -55,7 +63,9 @@ class UserController extends Controller
 
         // Security check for role assignment
         $targetRole = Role::findOrFail($validated['role_id']);
-        if ($currentUser && !$currentUser->isSuperAdmin()) {
+        if ($targetRole->name === 'super_admin') {
+            $validated['university_id'] = null;
+        } elseif ($currentUser && !$currentUser->isSuperAdmin()) {
             if (in_array($targetRole->name, ['super_admin', 'university_admin'])) {
                 return back()->withErrors(['role_id' => 'You do not have permission to create Administrator accounts.']);
             }
