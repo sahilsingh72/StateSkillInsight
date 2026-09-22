@@ -16,6 +16,9 @@
             <thead class="table-light">
                 <tr>
                     <th>Respondent</th>
+                    @if(auth()->check() && auth()->user()->isSuperAdmin())
+                        <th>Institution / University</th>
+                    @endif
                     <th>Question</th>
                     <th>Category</th>
                     <th>Audio Player</th>
@@ -29,6 +32,20 @@
                             <strong>{{ $v->response->respondentSurvey->respondent->name ?? 'Respondent' }}</strong><br>
                             <small class="text-muted">{{ $v->response->respondentSurvey->respondent->email ?? '' }}</small>
                         </td>
+                        @if(auth()->check() && auth()->user()->isSuperAdmin())
+                            <td>
+                                @php
+                                    $respUni = $v->response->respondentSurvey->respondent->university ?? null;
+                                @endphp
+                                @if($respUni)
+                                    <span class="badge bg-primary-subtle text-primary border" title="{{ $respUni->name }}">
+                                        <i class="bi bi-building me-1"></i> {{ $respUni->short_name ?? $respUni->name }}
+                                    </span>
+                                @else
+                                    <span class="badge bg-light text-muted border">N/A</span>
+                                @endif
+                            </td>
+                        @endif
                         <td>
                             <div class="small fw-semibold text-dark">{{ Str::limit($v->response->question->question_text ?? '', 50) }}</div>
                         </td>

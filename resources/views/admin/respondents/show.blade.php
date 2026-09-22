@@ -15,6 +15,18 @@
     <div class="col-md-4">
         <div class="card-custom p-4">
             <h6 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="bi bi-person-vcard me-2 text-primary"></i> Demographic Profile</h6>
+            @if(auth()->check() && auth()->user()->isSuperAdmin())
+                <div class="small mb-2">
+                    <strong>Institution:</strong> 
+                    @if($respondent->university)
+                        <span class="badge bg-primary-subtle text-primary border ms-1">
+                            <i class="bi bi-building me-1"></i> {{ $respondent->university->name }} ({{ $respondent->university->short_name }})
+                        </span>
+                    @else
+                        <span class="text-muted">N/A</span>
+                    @endif
+                </div>
+            @endif
             <div class="small mb-2"><strong>Email:</strong> {{ $respondent->email ?? 'N/A' }}</div>
             <div class="small mb-2"><strong>Mobile:</strong> {{ $respondent->mobile ?? 'N/A' }}</div>
             <div class="small mb-2"><strong>Gender:</strong> {{ $respondent->gender ?? 'N/A' }}</div>
@@ -22,7 +34,7 @@
             <div class="small mb-2"><strong>Department:</strong> {{ $respondent->department }}</div>
             <div class="small mb-2"><strong>Graduation Year:</strong> {{ $respondent->graduation_year }}</div>
             <div class="small mb-2"><strong>Location:</strong> {{ $respondent->current_city }}, {{ $respondent->country }}</div>
-            <div class="small mb-2"><strong>Consent Given:</strong> Yes ({{ $respondent->consent_at->format('Y-m-d') }})</div>
+            <div class="small mb-2"><strong>Consent Given:</strong> Yes ({{ $respondent->consent_at ? $respondent->consent_at->format('Y-m-d') : 'Yes' }})</div>
         </div>
     </div>
 

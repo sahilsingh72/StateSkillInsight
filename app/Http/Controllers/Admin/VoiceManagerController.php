@@ -11,7 +11,7 @@ class VoiceManagerController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        $query = VoiceResponse::with(['response.question', 'response.respondentSurvey.respondent']);
+        $query = VoiceResponse::with(['response.question', 'response.respondentSurvey.category', 'response.respondentSurvey.respondent.university']);
 
         if ($user && !$user->isSuperAdmin()) {
             $uniId = $user->university_id;
