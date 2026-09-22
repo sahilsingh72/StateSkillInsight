@@ -11,6 +11,7 @@ class Question extends Model
 
     protected $fillable = [
         'section_id',
+        'university_id',
         'question_text',
         'help_text',
         'type',
@@ -34,6 +35,16 @@ class Question extends Model
     public function section()
     {
         return $this->belongsTo(SurveySection::class, 'section_id');
+    }
+
+    public function university()
+    {
+        return $this->belongsTo(University::class, 'university_id');
+    }
+
+    public function universities()
+    {
+        return $this->belongsToMany(University::class, 'question_university', 'question_id', 'university_id');
     }
 
     public function dimension()

@@ -114,11 +114,29 @@ class PublicSurveyController extends Controller
         $respondentSurvey = RespondentSurvey::where('respondent_id', $respondent->id)->firstOrFail();
         $survey = $respondentSurvey->survey;
         $category = $respondentSurvey->category;
-        $sections = $category->sections()->with(['questions.options', 'questions.conditions', 'questions.translations'])->orderBy('order')->get();
-        $university = $survey->university;
+        $uniId = $respondent->university_id;
+
+        // Fetch sections & questions assigned to respondent's university or common/global questions
+        $sections = $category->sections()
+            ->where(function ($q) use ($uniId) {
+                $q->whereNull('university_id')
+                  ->orWhere('university_id', $uniId)
+                  ->orWhereHas('questions', function ($q2) use ($uniId) {
+                      $q2->whereNull('university_id')->orWhere('university_id', $uniId);
+                  });
+            })
+            ->with(['questions' => function ($q) use ($uniId) {
+                $q->where(function ($sub) use ($uniId) {
+                    $sub->whereNull('university_id')->orWhere('university_id', $uniId);
+                })->where('is_active', true)->orderBy('order');
+            }, 'questions.options', 'questions.conditions', 'questions.translations'])
+            ->orderBy('order')
+            ->get();
+
+        $university = $respondent->university ?? $survey->university;
 
         // Current section
-        $currentSectionId = $request->query('section') ?? ($respondentSurvey->current_section_id ?? $sections->first()->id);
+        $currentSectionId = $request->query('section') ?? ($respondentSurvey->current_section_id ?? $sections->first()?->id);
         $currentSection = $sections->firstWhere('id', $currentSectionId) ?? $sections->first();
 
         // Existing responses map
@@ -212,8 +230,25 @@ class PublicSurveyController extends Controller
         $respondentSurvey = RespondentSurvey::where('respondent_id', $respondent->id)->firstOrFail();
         $survey = $respondentSurvey->survey;
         $category = $respondentSurvey->category;
-        $university = $survey->university;
-        $sections = $category->sections()->with(['questions.options'])->orderBy('order')->get();
+        $uniId = $respondent->university_id;
+        $university = $respondent->university ?? $survey->university;
+
+        $sections = $category->sections()
+            ->where(function ($q) use ($uniId) {
+                $q->whereNull('university_id')
+                  ->orWhere('university_id', $uniId)
+                  ->orWhereHas('questions', function ($q2) use ($uniId) {
+                      $q2->whereNull('university_id')->orWhere('university_id', $uniId);
+                  });
+            })
+            ->with(['questions' => function ($q) use ($uniId) {
+                $q->where(function ($sub) use ($uniId) {
+                    $sub->whereNull('university_id')->orWhere('university_id', $uniId);
+                })->where('is_active', true)->orderBy('order');
+            }, 'questions.options'])
+            ->orderBy('order')
+            ->get();
+
         $responses = Response::where('respondent_survey_id', $respondentSurvey->id)->get()->keyBy('question_id');
 
         return view('survey.review', compact('university', 'survey', 'category', 'respondent', 'respondentSurvey', 'sections', 'responses'));

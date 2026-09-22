@@ -44,9 +44,14 @@ class Survey extends Model
         return $this->belongsTo(University::class);
     }
 
+    public function universities()
+    {
+        return $this->belongsToMany(University::class, 'survey_university');
+    }
+
     public function categories()
     {
-        return $this->hasMany(SurveyCategory::class)->orderBy('order');
+        return $this->belongsToMany(SurveyCategory::class, 'survey_category_survey', 'survey_id', 'survey_category_id')->orderBy('order');
     }
 
     public function psychometricDimensions()

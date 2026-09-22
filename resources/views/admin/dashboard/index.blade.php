@@ -73,7 +73,7 @@
     </div>
     <div class="col-md-3">
         <a href="{{ route('admin.analytics.category2') }}" class="card-custom p-3 d-block text-decoration-none text-dark hover-shadow border-start border-teal border-4" style="border-color:var(--uni-secondary)!important;">
-            <div class="fw-bold" style="color:var(--uni-secondary);"><i class="bi bi-person-search me-2"></i> Job-Seeking Alumni</div>
+            <div class="fw-bold" style="color:var(--uni-secondary);"><i class="bi bi-person-vcard me-2"></i> Job-Seeking Alumni</div>
             <div class="fs-4 fw-bold mt-2">{{ number_format($metrics['cat2_count']) }}</div>
             <small class="text-muted">Recruitment Bottlenecks</small>
         </a>

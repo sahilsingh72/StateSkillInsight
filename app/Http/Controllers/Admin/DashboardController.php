@@ -14,11 +14,23 @@ class DashboardController extends Controller
 {
     public function index(AnalyticsService $analyticsService)
     {
-        $metrics = $analyticsService->getOverviewMetrics();
-        $chartData = $analyticsService->getChartData();
-        $recentRespondents = Respondent::latest()->take(8)->get();
-        $university = University::first();
-        $surveys = Survey::all();
+        $user = auth()->user();
+        $uniId = ($user && !$user->isSuperAdmin()) ? $user->university_id : null;
+
+        $metrics = $analyticsService->getOverviewMetrics($uniId);
+        $chartData = $analyticsService->getChartData($uniId);
+
+        $respQuery = Respondent::query();
+        $surveyQuery = Survey::query();
+
+        if ($uniId) {
+            $respQuery->where('university_id', $uniId);
+            $surveyQuery->where('university_id', $uniId);
+        }
+
+        $recentRespondents = $respQuery->latest()->take(8)->get();
+        $university = $user ? ($user->university ?? University::find($uniId)) : University::first();
+        $surveys = $surveyQuery->get();
 
         return view('admin.dashboard.index', compact('metrics', 'chartData', 'recentRespondents', 'university', 'surveys'));
     }

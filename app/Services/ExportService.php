@@ -15,7 +15,13 @@ class ExportService
     {
         $fileName = 'respondents_export_' . date('Y_m_d_His') . '.csv';
 
+        $user = auth()->user();
         $query = Respondent::with('university');
+
+        if ($user && !$user->isSuperAdmin()) {
+            $query->where('university_id', $user->university_id);
+        }
+
         if ($categoryCode) {
             $query->where('category_code', $categoryCode);
         }

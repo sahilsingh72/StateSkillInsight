@@ -32,7 +32,13 @@
                         <td><strong>{{ $u->name }}</strong></td>
                         <td>{{ $u->email }}</td>
                         <td><span class="badge bg-primary-subtle text-primary border">{{ strtoupper($u->roleRelation->display_name ?? $u->roleRelation->name ?? 'NO ROLE') }}</span></td>
-                        <td>{{ $u->university->name ?? 'System Wide' }}</td>
+                        <td>
+                            @if($u->isSuperAdmin())
+                                <span class="badge bg-primary text-white border"><i class="bi bi-shield-lock me-1"></i> Global System Admin (Software Apex)</span>
+                            @else
+                                <span class="fw-semibold text-secondary">{{ $u->university->name ?? 'Unassigned' }}</span>
+                            @endif
+                        </td>
                         <td><span class="badge bg-success">ACTIVE</span></td>
                         <td>{{ $u->created_at->format('d M Y') }}</td>
                     </tr>

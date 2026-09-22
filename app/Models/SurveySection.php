@@ -11,6 +11,7 @@ class SurveySection extends Model
 
     protected $fillable = [
         'category_id',
+        'university_id',
         'title',
         'description',
         'order',
@@ -19,6 +20,16 @@ class SurveySection extends Model
     public function category()
     {
         return $this->belongsTo(SurveyCategory::class, 'category_id');
+    }
+
+    public function university()
+    {
+        return $this->belongsTo(University::class, 'university_id');
+    }
+
+    public function universities()
+    {
+        return $this->belongsToMany(University::class, 'section_university', 'section_id', 'university_id');
     }
 
     public function questions()

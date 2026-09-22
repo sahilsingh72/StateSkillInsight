@@ -38,6 +38,11 @@ class User extends Authenticatable
         return $this->belongsTo(University::class);
     }
 
+    public function role()
+    {
+        return $this->belongsTo(Role::class, 'role_id');
+    }
+
     public function roleRelation()
     {
         return $this->belongsTo(Role::class, 'role_id');
@@ -48,14 +53,9 @@ class User extends Authenticatable
         return $this->roleRelation->name ?? '';
     }
 
-    public function roles()
-    {
-        return $this->belongsToMany(Role::class);
-    }
-
     public function hasRole(string $roleName): bool
     {
-        return $this->role_name === $roleName || ($this->roles && $this->roles->contains('name', $roleName));
+        return $this->role_name === $roleName;
     }
 
     public function isSuperAdmin(): bool

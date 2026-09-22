@@ -15,7 +15,8 @@ class ReportController extends Controller
 
     public function generate(string $type)
     {
-        $university = University::first();
+        $user = auth()->user();
+        $university = ($user && !$user->isSuperAdmin()) ? ($user->university ?? University::find($user->university_id)) : University::first();
         AuditLog::log("generated_{$type}_report", 'Report', null);
 
         return view('admin.reports.view', compact('university', 'type'));
