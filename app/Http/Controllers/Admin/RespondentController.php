@@ -12,7 +12,7 @@ class RespondentController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        $query = Respondent::with('respondentSurveys.survey');
+        $query = Respondent::with(['university', 'respondentSurveys.survey']);
 
         if ($user && !$user->isSuperAdmin()) {
             $query->where('university_id', $user->university_id);
@@ -42,7 +42,7 @@ class RespondentController extends Controller
             abort(403, 'Unauthorized. You do not have access to respondent records from other institutions.');
         }
 
-        $respondent->load(['respondentSurveys.responses.question', 'respondentSurveys.scores', 'respondentSurveys.interventions.rule']);
+        $respondent->load(['university', 'respondentSurveys.responses.question', 'respondentSurveys.scores', 'respondentSurveys.interventions.rule']);
         return view('admin.respondents.show', compact('respondent'));
     }
 }

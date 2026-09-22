@@ -24,6 +24,7 @@
                     <th>Status</th>
                     <th>Token Link</th>
                     <th>Sent At</th>
+                    <th class="text-end">Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -36,7 +37,15 @@
                         <td>
                             <code class="small" style="font-size:0.75rem;">/survey/start/{{ Str::limit($inv->token, 12) }}...</code>
                         </td>
-                        <td>{{ $inv->created_at->format('d M Y') }}</td>
+                        <td>{{ $inv->sent_at ? $inv->sent_at->format('d M Y H:i') : $inv->created_at->format('d M Y') }}</td>
+                        <td class="text-end">
+                            <form action="{{ route('admin.invitations.resend', $inv->id) }}" method="POST" class="d-inline">
+                                @csrf
+                                <button type="submit" class="btn btn-outline-primary btn-sm" title="Resend Email Invitation">
+                                    <i class="bi bi-send me-1"></i> Resend Mail
+                                </button>
+                            </form>
+                        </td>
                     </tr>
                 @endforeach
             </tbody>
@@ -56,11 +65,14 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Target Survey</label>
-                        <select name="survey_id" class="form-select" required>
-                            @foreach($surveys as $s)
-                                <option value="{{ $s->id }}">{{ $s->title }}</option>
-                            @endforeach
+                        <label class="form-label fw-semibold">Target Survey <span class="text-danger">*</span></label>
+                        <select name="survey_id" class="form-select border-primary" required>
+                            <option value="">-- Select Target Survey --</option>
+                            @forelse($surveys as $s)
+                                <option value="{{ $s->id }}" {{ $loop->first ? 'selected' : '' }}>{{ $s->title }}</option>
+                            @empty
+                                <option value="" disabled>No Surveys Available</option>
+                            @endforelse
                         </select>
                     </div>
                     <div class="mb-3">

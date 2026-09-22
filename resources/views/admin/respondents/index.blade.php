@@ -37,11 +37,14 @@
             <thead class="table-light">
                 <tr>
                     <th>Respondent Name</th>
+                    @if(auth()->check() && auth()->user()->isSuperAdmin())
+                        <th>Institution / University</th>
+                    @endif
                     <th>Category</th>
                     <th>Programme & Dept</th>
                     <th>Grad Year</th>
                     <th>City / Location</th>
-                    <th>Date Joined</th>
+                    <th>Date</th>
                     <th>Action</th>
                 </tr>
             </thead>
@@ -52,6 +55,17 @@
                             <div class="fw-bold text-dark">{{ $r->name }}</div>
                             <small class="text-muted">{{ $r->email ?? $r->mobile }}</small>
                         </td>
+                        @if(auth()->check() && auth()->user()->isSuperAdmin())
+                            <td>
+                                @if($r->university)
+                                    <span class="badge bg-primary-subtle text-primary border" title="{{ $r->university->name }}">
+                                        <i class="bi bi-building me-1"></i> {{ $r->university->short_name ?? $r->university->name }}
+                                    </span>
+                                @else
+                                    <span class="badge bg-light text-muted border">N/A</span>
+                                @endif
+                            </td>
+                        @endif
                         <td>
                             <span class="badge bg-light text-primary border">{{ $r->category_code }}</span>
                         </td>

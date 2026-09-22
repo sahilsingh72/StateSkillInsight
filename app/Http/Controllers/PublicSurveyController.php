@@ -9,6 +9,7 @@ use App\Models\RespondentSurvey;
 use App\Models\Response;
 use App\Models\Survey;
 use App\Models\SurveyCategory;
+use App\Models\SurveyInvitation;
 use App\Models\SurveySection;
 use App\Models\University;
 use App\Services\InterventionEngine;
@@ -99,10 +100,81 @@ class PublicSurveyController extends Controller
     /**
      * Start via secure token link (e.g. from email invitation).
      */
-    public function startByToken(string $token)
+    public function startByToken(Request $request, string $token)
     {
-        $respondent = Respondent::where('token', $token)->firstOrFail();
-        return redirect()->route('survey.take', ['token' => $token]);
+        // 1. Check if Respondent session already exists for this token
+        $respondent = Respondent::where('token', $token)->first();
+
+        if ($respondent) {
+            return redirect()->route('survey.take', ['token' => $token]);
+        }
+
+        // 2. Check if token belongs to an unfulfilled SurveyInvitation
+        $invitation = SurveyInvitation::where('token', $token)->first();
+
+        if ($invitation) {
+            // Update invitation status
+            $invitation->update([
+                'status' => 'opened',
+                'opened_at' => $invitation->opened_at ?? now(),
+            ]);
+
+            $survey = Survey::find($invitation->survey_id) ?? Survey::where('status', 'published')->first() ?? Survey::first();
+
+            if (!$survey) {
+                abort(404, 'Associated survey not found.');
+            }
+
+            // Find matching category or first available category in survey
+            $category = SurveyCategory::where('survey_id', $survey->id)
+                ->where('code', $invitation->category_code)
+                ->first();
+
+            if (!$category) {
+                $category = $survey->categories()->orderBy('order')->first();
+            }
+
+            if (!$category) {
+                abort(404, 'No active category found for this survey.');
+            }
+
+            // Determine university ID
+            $universityId = $survey->university_id 
+                ?? $survey->universities()->first()?->id 
+                ?? University::where('is_active', true)->first()?->id;
+
+            $respondent = Respondent::create([
+                'university_id' => $universityId,
+                'token' => $token,
+                'name' => $invitation->name,
+                'email' => $invitation->email,
+                'mobile' => $invitation->mobile,
+                'programme' => $invitation->programme,
+                'department' => $invitation->department,
+                'category_code' => $category->code,
+                'consent_given' => true,
+                'consent_at' => now(),
+            ]);
+
+            $firstSection = $category->sections()->orderBy('order')->first();
+
+            RespondentSurvey::create([
+                'respondent_id' => $respondent->id,
+                'survey_id' => $survey->id,
+                'category_id' => $category->id,
+                'status' => 'in_progress',
+                'current_section_id' => $firstSection ? $firstSection->id : null,
+                'completion_percentage' => 0.00,
+                'last_saved_at' => now(),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            return redirect()->route('survey.take', ['token' => $token]);
+        }
+
+        // 3. If token is invalid / not found anywhere
+        abort(404, 'Invalid or expired survey invitation token.');
     }
 
     /**

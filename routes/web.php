@@ -99,6 +99,7 @@ Route::middleware(['auth'])->group(function () {
         // Invitations & Audit Logs
         Route::get('/invitations', [InvitationController::class, 'index'])->name('invitations.index');
         Route::post('/invitations', [InvitationController::class, 'store'])->name('invitations.store');
+        Route::post('/invitations/{id}/resend', [InvitationController::class, 'resend'])->name('invitations.resend');
         Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit_logs.index');
 
         // User & Role Management
