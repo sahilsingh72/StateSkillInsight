@@ -85,8 +85,8 @@
                     <i class="bi bi-bank fs-4"></i>
                 </div>
                 <div>
-                    <h5 class="fw-bold mb-0 text-dark">{{ isset($university) ? $university->name : 'State Skill & Higher Education Portal' }}</h5>
-                    <small class="text-secondary" style="font-size:0.8rem;">{{ isset($university) ? ($university->tagline ?? 'Institutional Research & Planning Study') : 'National Institutional Research & Employability Continuum Platform' }}</small>
+                    <h5 class="fw-bold mb-0 text-dark">{{ isset($university) ? $university->name : 'State Skill Insight Portal' }}</h5>
+                    <small class="text-secondary" style="font-size:0.8rem;">{{ isset($university) ? ($university->tagline ?? 'Institutional Research & Planning Study') : 'State Skill & Employability Research Continuum Platform' }}</small>
                 </div>
             </a>
 
@@ -100,18 +100,6 @@
                         <i class="bi bi-box-arrow-in-right me-1"></i> Admin Login
                     </a>
                 @endauth
-
-                <!-- Language Switcher -->
-                <div class="dropdown">
-                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        <i class="bi bi-translate me-1"></i> Language: {{ strtoupper(session('survey_locale', 'en')) }}
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="{{ route('survey.locale', 'en') }}">English</a></li>
-                        <li><a class="dropdown-item" href="{{ route('survey.locale', 'hi') }}">हिंदी (Hindi)</a></li>
-                        <li><a class="dropdown-item" href="{{ route('survey.locale', 'or') }}">ଓଡ଼ିଆ (Odia)</a></li>
-                    </ul>
-                </div>
             </div>
         </div>
     </header>

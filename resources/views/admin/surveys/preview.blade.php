@@ -34,6 +34,42 @@
             </small>
         </div>
         <div class="d-flex align-items-center gap-2">
+            @if(isset($isSuperAdmin) && $isSuperAdmin)
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-info dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-building me-1"></i> Institution: 
+                        {{ request('university_id') === 'global' ? 'Global / Common Only' : ($university ? $university->name : 'All Institutions (Unfiltered)') }}
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                        <li>
+                            <a class="dropdown-item {{ !request()->filled('university_id') && !$targetUniId ? 'active' : '' }}"
+                               href="{{ route('admin.surveys.preview', ['survey' => $survey->id, 'category_id' => request('category_id')]) }}">
+                                <i class="bi bi-globe me-2 text-primary"></i> All Institutions (Unfiltered)
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item {{ request('university_id') === 'global' ? 'active' : '' }}"
+                               href="{{ route('admin.surveys.preview', ['survey' => $survey->id, 'category_id' => request('category_id'), 'university_id' => 'global']) }}">
+                                <i class="bi bi-shield-check me-2 text-success"></i> Global / Common Only
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        @foreach($universities as $uniItem)
+                            <li>
+                                <a class="dropdown-item {{ $targetUniId == $uniItem->id && request('university_id') !== 'global' ? 'active' : '' }}" 
+                                   href="{{ route('admin.surveys.preview', ['survey' => $survey->id, 'category_id' => request('category_id'), 'university_id' => $uniItem->id]) }}">
+                                    <i class="bi bi-building me-2 text-secondary"></i> {{ $uniItem->name }}
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @else
+                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-3 py-1 fs-6">
+                    <i class="bi bi-building me-1"></i> {{ $university ? $university->name : 'Assigned Institution' }}
+                </span>
+            @endif
+
             @if(isset($categories) && $categories->count() > 1)
                 <div class="dropdown">
                     <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
@@ -43,7 +79,7 @@
                         @foreach($categories as $catItem)
                             <li>
                                 <a class="dropdown-item {{ $category && $category->id == $catItem->id ? 'active' : '' }}" 
-                                   href="{{ route('admin.surveys.preview', ['survey' => $survey->id, 'category_id' => $catItem->id]) }}">
+                                   href="{{ route('admin.surveys.preview', array_filter(['survey' => $survey->id, 'category_id' => $catItem->id, 'university_id' => request('university_id')])) }}">
                                     {{ $catItem->name }}
                                 </a>
                             </li>

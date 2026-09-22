@@ -51,6 +51,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/surveys/{survey}', [SurveyController::class, 'show'])->name('surveys.show');
         Route::get('/surveys/{survey}/edit', [SurveyController::class, 'edit'])->name('surveys.edit');
         Route::put('/surveys/{survey}', [SurveyController::class, 'update'])->name('surveys.update');
+        Route::delete('/surveys/{survey}', [SurveyController::class, 'destroy'])->name('surveys.destroy');
         Route::post('/surveys/{survey}/clone', [SurveyController::class, 'clone'])->name('surveys.clone');
         Route::get('/surveys/{survey}/preview', [SurveyController::class, 'preview'])->name('surveys.preview');
 
@@ -59,8 +60,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
         Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
         Route::put('/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
+
+        Route::get('/sections', [SectionController::class, 'index'])->name('sections.index');
         Route::post('/sections', [SectionController::class, 'store'])->name('sections.store');
         Route::put('/sections/{section}', [SectionController::class, 'update'])->name('sections.update');
+        Route::delete('/sections/{section}', [SectionController::class, 'destroy'])->name('sections.destroy');
 
         // Question Bank & Builder
         Route::get('/questions', [QuestionController::class, 'index'])->name('questions.index');

@@ -47,11 +47,13 @@
             <div class="small mb-3">
                 <strong>Version:</strong> v{{ $survey->version }}
             </div>
-            <div class="pt-3 border-top d-grid gap-2">
-                <button type="button" class="btn btn-uni-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
-                    <i class="bi bi-folder-plus me-1"></i> Add New Category
-                </button>
-            </div>
+            @if(auth()->check() && auth()->user()->isSuperAdmin())
+                <div class="pt-3 border-top d-grid gap-2">
+                    <button type="button" class="btn btn-uni-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+                        <i class="bi bi-folder-plus me-1"></i> Add New Category
+                    </button>
+                </div>
+            @endif
         </div>
     </div>
 
@@ -60,9 +62,11 @@
         <div class="card-custom p-4">
             <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
                 <h6 class="fw-bold text-dark mb-0"><i class="bi bi-layers me-2 text-primary"></i> Configured Categories ({{ $survey->categories->count() }})</h6>
-                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
-                    <i class="bi bi-plus-lg me-1"></i> Add Category
-                </button>
+                @if(auth()->check() && auth()->user()->isSuperAdmin())
+                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+                        <i class="bi bi-plus-lg me-1"></i> Add Category
+                    </button>
+                @endif
             </div>
             
             @if($survey->categories->isEmpty())

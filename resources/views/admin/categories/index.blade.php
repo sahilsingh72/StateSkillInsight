@@ -8,13 +8,18 @@
         <h4 class="fw-bold text-dark mb-1">Database-Driven Category Engine</h4>
         <p class="text-secondary small mb-0">Define, edit, and maintain master research categories dynamically.</p>
     </div>
-    <button class="btn btn-primary-custom btn-sm" data-bs-toggle="modal" data-bs-target="#createCategoryModal">
-        <i class="bi bi-folder-plus me-1"></i> Create New Category
-    </button>
+    @if(auth()->check() && auth()->user()->isSuperAdmin())
+        <button class="btn btn-primary-custom btn-sm" data-bs-toggle="modal" data-bs-target="#createCategoryModal">
+            <i class="bi bi-folder-plus me-1"></i> Create New Category
+        </button>
+    @endif
 </div>
 
 <div class="row g-4">
     @foreach($categories as $cat)
+        @php
+            $assignedSurvey = $cat->survey ?? $cat->surveys->first();
+        @endphp
         <div class="col-md-6">
             <div class="card-custom p-4 h-100">
                 <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
@@ -24,16 +29,23 @@
                         </div>
                         <div>
                             <h6 class="fw-bold text-dark mb-0">{{ $cat->name }}</h6>
-                            <span class="badge bg-light text-secondary border">{{ $cat->code }}</span>
+                            <span class="badge bg-light text-secondary border me-1">{{ $cat->code }}</span>
+                            @if($assignedSurvey)
+                                <span class="badge bg-primary-subtle text-primary border" title="Attached to Survey: {{ $assignedSurvey->title }}">
+                                    <i class="bi bi-file-earmark-text me-1"></i> {{ Str::limit($assignedSurvey->title, 25) }}
+                                </span>
+                            @endif
                         </div>
                     </div>
                     <span class="badge bg-success">Active</span>
                 </div>
                 <p class="small text-secondary mb-3">{{ $cat->description }}</p>
                 <div class="small text-muted mb-3"><strong>Eligibility:</strong> {{ $cat->eligibility }}</div>
-                <div class="d-flex justify-content-end">
-                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editCatModal_{{ $cat->id }}"><i class="bi bi-pencil me-1"></i> Edit Category</button>
-                </div>
+                @if(auth()->check() && auth()->user()->isSuperAdmin())
+                    <div class="d-flex justify-content-end">
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editCatModal_{{ $cat->id }}"><i class="bi bi-pencil me-1"></i> Edit Category</button>
+                    </div>
+                @endif
             </div>
         </div>
 
@@ -49,6 +61,18 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Target Survey Campaign</label>
+                                <select name="survey_id" class="form-select border-primary">
+                                    <option value="">-- Select Survey (Optional / Unassigned) --</option>
+                                    @foreach($surveys as $s)
+                                        <option value="{{ $s->id }}" {{ ($cat->survey_id == $s->id || $cat->surveys->contains('id', $s->id)) ? 'selected' : '' }}>
+                                            {{ $s->title }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <small class="text-muted d-block mt-1">Assign or change the survey campaign for this category.</small>
+                            </div>
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Category Name <span class="text-danger">*</span></label>
                                 <input type="text" name="name" class="form-control" value="{{ $cat->name }}" required>
@@ -99,6 +123,16 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Target Survey Campaign</label>
+                        <select name="survey_id" class="form-select border-primary">
+                            <option value="">-- Select Survey Campaign (Optional) --</option>
+                            @foreach($surveys as $s)
+                                <option value="{{ $s->id }}">{{ $s->title }}</option>
+                            @endforeach
+                        </select>
+                        <small class="text-muted d-block mt-1">Assign this category to a specific survey campaign.</small>
+                    </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Category Name <span class="text-danger">*</span></label>
                         <input type="text" name="name" class="form-control" placeholder="e.g. Working Alumni or Technical Graduates" required>

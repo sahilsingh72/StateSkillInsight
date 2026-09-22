@@ -5,6 +5,23 @@
 @section('content')
 <div class="container" style="max-width: 900px;">
     
+@if($sections->isEmpty() || !$currentSection)
+    <div class="card border-0 shadow-sm rounded-4 p-5 bg-white text-center my-4">
+        <div class="rounded-circle p-3 text-warning bg-warning-subtle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
+            <i class="bi bi-exclamation-circle fs-2"></i>
+        </div>
+        <h4 class="fw-bold text-dark mb-2">No Survey Questions Configured Yet</h4>
+        <p class="text-secondary max-w-md mx-auto mb-4" style="max-width: 550px;">
+            No survey questions have been assigned to <strong>{{ $university->name ?? 'this institution' }}</strong> yet.
+            Please check back later or contact your institution administrator to set up questions.
+        </p>
+        <div>
+            <a href="{{ route('survey.landing') }}" class="btn btn-outline-primary px-4 rounded-pill">
+                <i class="bi bi-arrow-left me-1"></i> Return to Main Page
+            </a>
+        </div>
+    </div>
+@else
     <!-- Progress Indicator Header -->
     <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -175,6 +192,7 @@
             </div>
         </div>
     </form>
+@endif
 </div>
 @endsection
 

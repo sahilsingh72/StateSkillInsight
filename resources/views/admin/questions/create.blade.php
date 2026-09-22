@@ -28,6 +28,61 @@
                 </select>
             </div>
 
+            @if(auth()->check() && auth()->user()->isSuperAdmin())
+                <div class="mb-4 p-3 bg-light rounded-3 border">
+                    <label class="form-label fw-bold text-dark mb-2">Target Institution Scope / Assignment</label>
+                    <div class="d-flex gap-4 mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="scope_type" id="q_scope_global" value="global" 
+                                   {{ old('scope_type', 'global') === 'global' ? 'checked' : '' }}
+                                   onchange="toggleQScope(this.value)">
+                            <label class="form-check-label fw-semibold" for="q_scope_global">
+                                <i class="bi bi-globe me-1 text-primary"></i> Common / All Institutions (Global Question)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="scope_type" id="q_scope_specific" value="specific" 
+                                   {{ old('scope_type') === 'specific' ? 'checked' : '' }}
+                                   onchange="toggleQScope(this.value)">
+                            <label class="form-check-label fw-semibold" for="q_scope_specific">
+                                <i class="bi bi-building me-1 text-primary"></i> Specific Institution(s)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="q_universities_container" class="{{ old('scope_type') === 'specific' ? '' : 'd-none' }}">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label fw-semibold small mb-0">Select Target Institution(s) <span class="text-danger">*</span></label>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-secondary py-0 px-2 btn-xs" onclick="selectAllQUnis(true)">Select All</button>
+                                <button type="button" class="btn btn-outline-secondary py-0 px-2 btn-xs" onclick="selectAllQUnis(false)">Deselect All</button>
+                            </div>
+                        </div>
+                        <div class="row g-2 p-3 bg-white rounded-3 border overflow-auto" style="max-height: 200px;">
+                            @foreach($universities as $u)
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input q-uni-checkbox" type="checkbox" name="university_ids[]" value="{{ $u->id }}" id="q_uni_{{ $u->id }}"
+                                               {{ (is_array(old('university_ids')) && in_array($u->id, old('university_ids'))) ? 'checked' : '' }}>
+                                        <label class="form-check-label small" for="q_uni_{{ $u->id }}">
+                                            {{ $u->name }} <span class="text-muted">({{ $u->short_name }})</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                        <small class="text-muted d-block mt-1">This question will be shown only to respondents from the selected institution(s).</small>
+                    </div>
+                </div>
+            @elseif(auth()->check() && auth()->user()->university)
+                <input type="hidden" name="scope_type" value="specific">
+                <input type="hidden" name="university_ids[]" value="{{ auth()->user()->university_id }}">
+                <div class="mb-3 p-3 bg-light rounded-3 border">
+                    <small class="fw-semibold text-primary d-block mb-1"><i class="bi bi-building me-1"></i> Institution-Specific Question Assignment</small>
+                    <small class="text-muted">This question will be created under <strong>{{ auth()->user()->university->name }}</strong>.</small>
+                </div>
+            @endif
+
             <div class="mb-3">
                 <label class="form-label fw-semibold">Question Statement <span class="text-danger">*</span></label>
                 <textarea name="question_text" class="form-control" rows="3" placeholder="Enter the exact question statement..." required></textarea>
@@ -116,3 +171,21 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    function toggleQScope(value) {
+        const container = document.getElementById('q_universities_container');
+        if (container) {
+            if (value === 'specific') {
+                container.classList.remove('d-none');
+            } else {
+                container.classList.add('d-none');
+            }
+        }
+    }
+    function selectAllQUnis(checked) {
+        document.querySelectorAll('.q-uni-checkbox').forEach(cb => cb.checked = checked);
+    }
+</script>
+@endpush

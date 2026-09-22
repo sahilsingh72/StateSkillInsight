@@ -12,7 +12,7 @@ class CategoryController extends Controller
 {
     public function index()
     {
-        $categories = SurveyCategory::with('survey')->orderBy('order')->get();
+        $categories = SurveyCategory::with(['survey', 'surveys'])->orderBy('order')->get();
         $surveys = Survey::all();
 
         return view('admin.categories.index', compact('categories', 'surveys'));
@@ -20,6 +20,11 @@ class CategoryController extends Controller
 
     public function store(Request $request)
     {
+        $user = auth()->user();
+        if ($user && !$user->isSuperAdmin()) {
+            abort(403, 'Unauthorized. Only Super Administrators can create or modify research categories.');
+        }
+
         // Case 1: Syncing multiple existing categories to a survey (with select/deselect support)
         if ($request->has('category_ids') && $request->filled('survey_id')) {
             $request->validate([
@@ -70,6 +75,9 @@ class CategoryController extends Controller
         }
 
         $category = SurveyCategory::create($validated);
+        if ($category->survey_id) {
+            $category->surveys()->syncWithoutDetaching([$category->survey_id]);
+        }
         AuditLog::log('created_category', 'SurveyCategory', $category->id);
 
         return back()->with('success', 'New Category ('.$category->name.') created in Category Engine successfully!');
@@ -77,7 +85,13 @@ class CategoryController extends Controller
 
     public function update(Request $request, SurveyCategory $category)
     {
+        $user = auth()->user();
+        if ($user && !$user->isSuperAdmin()) {
+            abort(403, 'Unauthorized. Only Super Administrators can update research categories.');
+        }
+
         $validated = $request->validate([
+            'survey_id' => 'nullable|exists:surveys,id',
             'name' => 'required|string|max:255',
             'code' => 'nullable|string|max:50',
             'description' => 'nullable|string',
@@ -87,6 +101,10 @@ class CategoryController extends Controller
         ]);
 
         $category->update($validated);
+        if ($request->has('survey_id') && $request->survey_id) {
+            $category->surveys()->sync([$request->survey_id]);
+        }
+
         AuditLog::log('updated_category', 'SurveyCategory', $category->id);
 
         return back()->with('success', 'Category updated successfully!');
@@ -94,6 +112,11 @@ class CategoryController extends Controller
 
     public function syncSurveyCategories(Request $request, Survey $survey)
     {
+        $user = auth()->user();
+        if ($user && !$user->isSuperAdmin()) {
+            abort(403, 'Unauthorized. Only Super Administrators can sync survey categories.');
+        }
+
         $request->validate([
             'category_ids' => 'nullable|array',
             'category_ids.*' => 'exists:survey_categories,id',

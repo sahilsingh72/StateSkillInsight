@@ -168,6 +168,9 @@
             <a href="{{ route('admin.categories.index') }}" class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}">
                 <i class="bi bi-layers"></i> Categories
             </a>
+            <a href="{{ route('admin.sections.index') }}" class="nav-link {{ request()->routeIs('admin.sections.*') ? 'active' : '' }}">
+                <i class="bi bi-folder2-open"></i> Sections
+            </a>
             <a href="{{ route('admin.questions.index') }}" class="nav-link {{ request()->routeIs('admin.questions.*') ? 'active' : '' }}">
                 <i class="bi bi-question-square"></i> Question Bank
             </a>

@@ -127,7 +127,7 @@
                     <i class="bi bi-bank fs-4"></i>
                 </div>
                 <div>
-                    <h5 class="fw-bold text-dark mb-0">State Skill & Higher Education Portal</h5>
+                    <h5 class="fw-bold text-dark mb-0">State Skill Insight Portal</h5>
                     <small class="text-secondary">Institutional Research & Planning Portal</small>
                 </div>
             </a>
