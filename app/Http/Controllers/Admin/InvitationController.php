@@ -17,23 +17,14 @@ class InvitationController extends Controller
     public function index()
     {
         $user = auth()->user();
-        $invQuery = SurveyInvitation::with('survey');
+        $invQuery = SurveyInvitation::with(['survey', 'university']);
         $surveyQuery = Survey::query();
 
         if ($user && !$user->isSuperAdmin()) {
             $uniId = $user->university_id;
-            $invQuery->whereHas('survey', function ($q) use ($uniId) {
-                $q->where(function ($sub) use ($uniId) {
-                    $sub->where(function ($gq) {
-                        $gq->whereNull('university_id')
-                           ->whereDoesntHave('universities');
-                    })
-                    ->orWhere('university_id', $uniId)
-                    ->orWhereHas('universities', function ($uq) use ($uniId) {
-                        $uq->where('universities.id', $uniId);
-                    });
-                });
-            });
+            
+            // Only show invitations created by/for this specific university
+            $invQuery->where('university_id', $uniId);
 
             $surveyQuery->where(function ($q) use ($uniId) {
                 $q->where(function ($gq) {
@@ -59,12 +50,20 @@ class InvitationController extends Controller
 
     public function store(Request $request)
     {
+        $user = auth()->user();
         $validated = $request->validate([
             'survey_id' => 'required|exists:surveys,id',
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
             'category_code' => 'required|string',
         ]);
+
+        $survey = Survey::findOrFail($validated['survey_id']);
+
+        // Bind invitation to sender university
+        $validated['university_id'] = ($user && !$user->isSuperAdmin())
+            ? $user->university_id
+            : ($survey->university_id ?? $survey->universities()->first()?->id);
 
         $validated['token'] = Str::random(32);
         $validated['status'] = 'invited';

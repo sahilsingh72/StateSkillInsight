@@ -303,6 +303,25 @@
             </div>
         @endif
 
+        @if(session('error'))
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
+
+        @if(session('import_errors'))
+            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <h6 class="fw-bold mb-2"><i class="bi bi-exclamation-octagon-fill me-2"></i> Import Issues & Row Validation Errors:</h6>
+                <ul class="mb-0 ps-3 small">
+                    @foreach(session('import_errors') as $err)
+                        <li>{{ $err }}</li>
+                    @endforeach
+                </ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
+
         @yield('content')
     </div>
 

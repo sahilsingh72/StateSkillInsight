@@ -12,6 +12,7 @@ class Question extends Model
     protected $fillable = [
         'section_id',
         'university_id',
+        'created_by',
         'question_text',
         'help_text',
         'type',
@@ -31,6 +32,40 @@ class Question extends Model
         'settings' => 'array',
         'weight' => 'float',
     ];
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function canBeEditedBy(?User $user): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        // Superadmin can edit and delete any question
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        // If the question was created by a Superadmin, non-superadmins CANNOT edit or delete it
+        if ($this->creator && $this->creator->isSuperAdmin()) {
+            return false;
+        }
+
+        // If question is global (no specific university_id or created_by is null/superadmin), non-superadmins CANNOT edit or delete it
+        if (is_null($this->created_by) || is_null($this->university_id)) {
+            return false;
+        }
+
+        // If created by someone from another university, non-superadmins CANNOT edit or delete it
+        if ($this->university_id !== $user->university_id && (!$this->creator || $this->creator->university_id !== $user->university_id)) {
+            return false;
+        }
+
+        return true;
+    }
 
     public function section()
     {

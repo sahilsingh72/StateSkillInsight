@@ -118,6 +118,14 @@
                 </div>
             </div>
 
+            <div class="form-check form-switch mb-4 p-3 bg-light rounded-3 border">
+                <input class="form-check-input ms-0 me-2" type="checkbox" name="is_required" id="is_required_toggle" value="1" {{ old('is_required', '1') ? 'checked' : '' }}>
+                <label class="form-check-label fw-semibold text-dark" for="is_required_toggle">
+                    Must to answer <span class="badge bg-danger ms-1">Required</span>
+                </label>
+                <small class="text-muted d-block mt-1">If enabled, respondents must answer this question before proceeding or submitting.</small>
+            </div>
+
             <div class="mb-4">
                 <label class="form-label fw-semibold">Options (One per line for Choice/Dropdown types)</label>
                 <textarea name="options[]" class="form-control" rows="4" placeholder="Option 1&#10;Option 2&#10;Option 3&#10;Option 4"></textarea>

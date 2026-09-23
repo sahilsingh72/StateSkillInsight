@@ -93,11 +93,11 @@
             <div class="d-flex align-items-center gap-2">
                 @auth
                     <a href="{{ route('admin.dashboard') }}" class="btn btn-sm btn-uni-primary">
-                        <i class="bi bi-speedometer2 me-1"></i> Admin Dashboard
+                        <i class="bi bi-speedometer2 me-1"></i>Dashboard
                     </a>
                 @else
                     <a href="{{ route('login') }}" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-box-arrow-in-right me-1"></i> Admin Login
+                        <i class="bi bi-box-arrow-in-right me-1"></i>Login
                     </a>
                 @endauth
             </div>

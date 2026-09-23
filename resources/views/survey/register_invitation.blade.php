@@ -1,6 +1,6 @@
 @extends('layouts.survey')
 
-@section('title', 'Respondent Registration - ' . $category->name)
+@section('title', 'Complete Profile - ' . $category->name)
 
 @section('content')
 <div class="container" style="max-width: 750px;">
@@ -15,9 +15,8 @@
             </div>
         </div>
 
-        <form action="{{ route('survey.start') }}" method="POST">
+        <form action="{{ route('survey.complete_invitation_profile', ['token' => $invitation->token]) }}" method="POST">
             @csrf
-            <input type="hidden" name="category_code" value="{{ $category->code }}">
 
             <div class="row g-3 mb-4">
                 <div class="col-md-12">
@@ -29,7 +28,7 @@
                         @if($inis->count() > 0)
                             <optgroup label="Institutes of National Importance (IIT / NIT / IIM / AIIMS)">
                                 @foreach($inis as $inst)
-                                    <option value="{{ $inst->id }}">{{ $inst->name }} ({{ $inst->short_name }})</option>
+                                    <option value="{{ $inst->id }}" {{ ($selectedUniId == $inst->id) ? 'selected' : '' }}>{{ $inst->name }} ({{ $inst->short_name }})</option>
                                 @endforeach
                             </optgroup>
                         @endif
@@ -38,7 +37,7 @@
                         @if($unis->count() > 0)
                             <optgroup label="Central & State Universities">
                                 @foreach($unis as $inst)
-                                    <option value="{{ $inst->id }}">{{ $inst->name }} ({{ $inst->short_name }})</option>
+                                    <option value="{{ $inst->id }}" {{ ($selectedUniId == $inst->id) ? 'selected' : '' }}>{{ $inst->name }} ({{ $inst->short_name }})</option>
                                 @endforeach
                             </optgroup>
                         @endif
@@ -47,7 +46,7 @@
                         @if($autonomies->count() > 0)
                             <optgroup label="Autonomous Colleges">
                                 @foreach($autonomies as $inst)
-                                    <option value="{{ $inst->id }}">{{ $inst->name }} (Autonomous)</option>
+                                    <option value="{{ $inst->id }}" {{ ($selectedUniId == $inst->id) ? 'selected' : '' }}>{{ $inst->name }} (Autonomous)</option>
                                 @endforeach
                             </optgroup>
                         @endif
@@ -56,7 +55,7 @@
                         @if($affiliateds->count() > 0)
                             <optgroup label="Affiliated Colleges (Under Parent University)">
                                 @foreach($affiliateds as $inst)
-                                    <option value="{{ $inst->id }}">{{ $inst->name }} {{ $inst->parent ? '(Affiliated to '.$inst->parent->short_name.')' : '' }}</option>
+                                    <option value="{{ $inst->id }}" {{ ($selectedUniId == $inst->id) ? 'selected' : '' }}>{{ $inst->name }} {{ $inst->parent ? '(Affiliated to '.$inst->parent->short_name.')' : '' }}</option>
                                 @endforeach
                             </optgroup>
                         @endif
@@ -65,55 +64,65 @@
                         @if($polytechnics->count() > 0)
                             <optgroup label="Polytechnics & ITIs (Skill & Technical Institutes)">
                                 @foreach($polytechnics as $inst)
-                                    <option value="{{ $inst->id }}">{{ $inst->name }} (Polytechnic / ITI)</option>
+                                    <option value="{{ $inst->id }}" {{ ($selectedUniId == $inst->id) ? 'selected' : '' }}>{{ $inst->name }} (Polytechnic / ITI)</option>
                                 @endforeach
                             </optgroup>
                         @endif
                     </select>
                 </div>
+
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
-                    <input type="text" name="name" class="form-control" placeholder="Enter your full name" required>
+                    <input type="text" class="form-control bg-light" value="{{ $invitation->name }}" readonly disabled>
+                    <input type="hidden" name="name" value="{{ $invitation->name }}">
                 </div>
+
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Email Address (Optional)</label>
-                    <input type="email" name="email" class="form-control" placeholder="name@example.com">
+                    <input type="email" class="form-control bg-light" value="{{ $invitation->email }}" readonly disabled>
+                    <input type="hidden" name="email" value="{{ $invitation->email }}">
                 </div>
+
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Mobile Number (Optional)</label>
-                    <input type="tel" name="mobile" class="form-control" placeholder="+91 9876543210">
+                    <input type="tel" name="mobile" class="form-control" placeholder="+91 9876543210" value="{{ old('mobile', $invitation->mobile) }}">
                 </div>
+
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Gender (Optional)</label>
                     <select name="gender" class="form-select">
                         <option value="">Select Gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other / Prefer not to say</option>
+                        <option value="Male" {{ old('gender') == 'Male' ? 'selected' : '' }}>Male</option>
+                        <option value="Female" {{ old('gender') == 'Female' ? 'selected' : '' }}>Female</option>
+                        <option value="Other" {{ old('gender') == 'Other' ? 'selected' : '' }}>Other / Prefer not to say</option>
                     </select>
                 </div>
+
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Academic Programme <span class="text-danger">*</span></label>
-                    <select name="programme" id="programme_select" class="form-select border-primary" required>
+                    <select name="programme" id="programme_select_inv" class="form-select border-primary" required>
                         <option value="">-- Select Institution First --</option>
                     </select>
-                    <div id="other_programme_container" class="mt-2" style="display:none;">
-                        <input type="text" name="other_programme" id="other_programme_input" class="form-control border-primary" placeholder="Specify your Academic Programme">
+                    <div id="other_programme_container_inv" class="mt-2" style="display:none;">
+                        <input type="text" name="other_programme" id="other_programme_input_inv" class="form-control border-primary" placeholder="Specify your Academic Programme (e.g. B.Tech Artificial Intelligence)">
                     </div>
                 </div>
+
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Department / Discipline</label>
-                    <select name="department" id="department_select" class="form-select border-primary">
+                    <select name="department" id="department_select_inv" class="form-select border-primary">
                         <option value="">-- Select Programme First --</option>
                     </select>
-                    <div id="other_department_container" class="mt-2" style="display:none;">
-                        <input type="text" name="other_department" id="other_department_input" class="form-control border-primary" placeholder="Specify your Department / Discipline">
+                    <div id="other_department_container_inv" class="mt-2" style="display:none;">
+                        <input type="text" name="other_department" id="other_department_input_inv" class="form-control border-primary" placeholder="Specify your Department / Discipline" value="{{ old('other_department') }}">
                     </div>
                 </div>
+
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Graduation / Admission Year</label>
-                    <input type="text" name="graduation_year" class="form-control" placeholder="e.g. 2024">
+                    <input type="text" name="graduation_year" class="form-control" placeholder="e.g. 2024" value="{{ old('graduation_year') }}">
                 </div>
+
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Current Employment Status</label>
                     <select name="employment_status" class="form-select">
@@ -136,10 +145,7 @@
                 </div>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center">
-                <a href="{{ route('survey.landing') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left me-1"></i> Back
-                </a>
+            <div class="d-flex justify-content-end align-items-center">
                 <button type="submit" class="btn btn-uni-primary px-4">
                     Start The Survey <i class="bi bi-arrow-right ms-1"></i>
                 </button>
@@ -153,13 +159,16 @@
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     const uniSelect = document.querySelector('select[name="university_id"]');
-    const progSelect = document.getElementById('programme_select');
-    const otherProgContainer = document.getElementById('other_programme_container');
-    const otherProgInput = document.getElementById('other_programme_input');
+    const progSelect = document.getElementById('programme_select_inv');
+    const otherProgContainer = document.getElementById('other_programme_container_inv');
+    const otherProgInput = document.getElementById('other_programme_input_inv');
 
-    const deptSelect = document.getElementById('department_select');
-    const otherDeptContainer = document.getElementById('other_department_container');
-    const otherDeptInput = document.getElementById('other_department_input');
+    const deptSelect = document.getElementById('department_select_inv');
+    const otherDeptContainer = document.getElementById('other_department_container_inv');
+    const otherDeptInput = document.getElementById('other_department_input_inv');
+
+    const defaultProg = @json(old('programme', $invitation->programme));
+    const defaultDept = @json(old('department', $invitation->department));
 
     function checkOtherProgramme() {
         if (progSelect && progSelect.value === 'Other') {
@@ -208,18 +217,27 @@ document.addEventListener("DOMContentLoaded", function() {
             .then(response => response.json())
             .then(data => {
                 deptSelect.innerHTML = '<option value="">-- Select Department / Discipline --</option>';
+                let matched = false;
                 if (data.departments && data.departments.length > 0) {
                     data.departments.forEach(dept => {
                         if (dept === 'Other') return;
                         const opt = document.createElement('option');
                         opt.value = dept;
                         opt.textContent = dept;
+                        if (defaultDept && (defaultDept.toLowerCase() === dept.toLowerCase() || dept.toLowerCase().includes(defaultDept.toLowerCase()))) {
+                            opt.selected = true;
+                            matched = true;
+                        }
                         deptSelect.appendChild(opt);
                     });
                 }
                 const otherOpt = document.createElement('option');
                 otherOpt.value = 'Other';
                 otherOpt.textContent = 'Other (Please specify)';
+                if (defaultDept && !matched) {
+                    otherOpt.selected = true;
+                    matched = true;
+                }
                 deptSelect.appendChild(otherOpt);
 
                 checkOtherDepartment();
@@ -247,18 +265,28 @@ document.addEventListener("DOMContentLoaded", function() {
                 .then(response => response.json())
                 .then(data => {
                     progSelect.innerHTML = '<option value="">-- Select Academic Programme --</option>';
+                    let matched = false;
                     if (data.programmes && data.programmes.length > 0) {
                         data.programmes.forEach(prog => {
                             if (prog === 'Other') return;
                             const opt = document.createElement('option');
                             opt.value = prog;
                             opt.textContent = prog;
+                            if (defaultProg && (defaultProg.toLowerCase() === prog.toLowerCase() || prog.toLowerCase().includes(defaultProg.toLowerCase()))) {
+                                opt.selected = true;
+                                matched = true;
+                            }
                             progSelect.appendChild(opt);
                         });
                     }
+                    
                     const otherOpt = document.createElement('option');
                     otherOpt.value = 'Other';
                     otherOpt.textContent = 'Other (Please specify)';
+                    if (defaultProg && !matched) {
+                        otherOpt.selected = true;
+                        matched = true;
+                    }
                     progSelect.appendChild(otherOpt);
 
                     checkOtherProgramme();

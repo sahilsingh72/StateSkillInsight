@@ -8,9 +8,14 @@
         <h4 class="fw-bold text-dark mb-1">Higher Education Institutions & Colleges Directory</h4>
         <p class="text-secondary small mb-0">Enroll and manage IITs/NITs, Central/State Universities, Autonomous Colleges, Affiliated Colleges, and Polytechnics/ITIs.</p>
     </div>
-    <button class="btn btn-primary-custom btn-sm" data-bs-toggle="modal" data-bs-target="#newInstitutionModal" onclick="prepareEnrollModal('university')">
-        <i class="bi bi-building-add me-1"></i> Enroll New Institution
-    </button>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary-custom btn-sm" data-bs-toggle="modal" data-bs-target="#newInstitutionModal" onclick="prepareEnrollModal('university')">
+            <i class="bi bi-building-add me-1"></i> Enroll New Institution
+        </button>
+        <button class="btn btn-outline-primary btn-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#bulkImportModal">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Bulk Enroll
+        </button>
+    </div>
 </div>
 
 <!-- Filter & Search Controls Bar -->
@@ -266,6 +271,112 @@
                 <div class="modal-footer border-top px-4 py-3">
                     <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary-custom px-4"><i class="bi bi-check-circle me-1"></i> Enroll Institution</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Bulk Import Institutions -->
+<div class="modal fade" id="bulkImportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <form action="{{ route('admin.university.import') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold text-dark">
+                        <i class="bi bi-file-earmark-spreadsheet text-primary me-2"></i> Bulk Import Institutions (CSV Upload)
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-info border-info-subtle d-flex align-items-start gap-3 mb-4">
+                        <i class="bi bi-info-circle-fill fs-4 text-info flex-shrink-0"></i>
+                        <div class="small">
+                            <strong class="d-block mb-1 text-dark">Instructions for Bulk CSV Import:</strong>
+                            <ul class="mb-2 ps-3">
+                                <li>Upload a <code>.csv</code> file containing the list of institutes to enroll in bulk.</li>
+                                <li>Required columns: <strong>Name</strong>, <strong>Short Name</strong>.</li>
+                                <li>In the <code>Type</code> column, choose any of the 5 exact classification options:
+                                    <ol class="mt-1 mb-1 ps-3">
+                                        <li><code>Institute of National Importance (IIT / NIT / IIM / AIIMS)</code></li>
+                                        <li><code>Central / State University</code></li>
+                                        <li><code>Autonomous College (Independent Academic Autonomy)</code></li>
+                                        <li><code>Affiliated College (Works Under Parent University)</code></li>
+                                        <li><code>Polytechnic & ITI (Technical / Skill Institute)</code></li>
+                                    </ol>
+                                </li>
+                                <li>For affiliated colleges, specify <code>Affiliated Under (Short Name)</code> (e.g. <code>UU</code>, <code>BPUT</code>) to automatically link to the Affiliating university.</li>
+                            </ul>
+                            <a href="{{ route('admin.university.sample_csv') }}" class="btn btn-sm btn-outline-info fw-bold text-decoration-none">
+                                <i class="bi bi-download me-1"></i> Download Pre-Formatted Excel Template (.xlsx)
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-dark">Choose Spreadsheet / CSV File to Upload <span class="text-danger">*</span></label>
+                        <input type="file" name="import_file" class="form-control form-control-lg border-primary" accept=".xlsx, .xls, .csv, .txt" required>
+                        <small class="text-muted d-block mt-1">Accepted formats: .xlsx, .xls, .csv, .txt (Max file size: 10MB)</small>
+                    </div>
+
+                    <div class="p-3 bg-light rounded-3 border">
+                        <h6 class="fw-bold text-dark small mb-2"><i class="bi bi-table me-1 text-secondary"></i> Expected CSV Header & Data Format:</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered bg-white text-nowrap small mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Name *</th>
+                                        <th>Short Name *</th>
+                                        <th>Type</th>
+                                        <th>Email</th>
+                                        <th>Phone</th>
+                                        <th>Website</th>
+                                        <th>State</th>
+                                        <th>Affiliated Under (Short Name)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>IIT Bhubaneswar</td>
+                                        <td>IIT BBS</td>
+                                        <td>Institute of National Importance (IIT / NIT / IIM / AIIMS)</td>
+                                        <td>contact@iitbbs.ac.in</td>
+                                        <td>06742576000</td>
+                                        <td>https://iitbbs.ac.in</td>
+                                        <td>Odisha</td>
+                                        <td><em>(leave blank)</em></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Utkal University</td>
+                                        <td>UU</td>
+                                        <td>Central / State University</td>
+                                        <td>info@utkaluniversity.ac.in</td>
+                                        <td>06742567382</td>
+                                        <td>https://utkaluniversity.ac.in</td>
+                                        <td>Odisha</td>
+                                        <td><em>(leave blank)</em></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Bhubaneswar Inst. of Tech.</td>
+                                        <td>BIT</td>
+                                        <td>Affiliated College (Works Under Parent University)</td>
+                                        <td>info@bit.edu.in</td>
+                                        <td>06742500111</td>
+                                        <td>https://bit.edu.in</td>
+                                        <td>Odisha</td>
+                                        <td>UU</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top px-4 py-3">
+                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary-custom px-4">
+                        <i class="bi bi-upload me-1"></i> Upload & Import Institutions
+                    </button>
                 </div>
             </form>
         </div>

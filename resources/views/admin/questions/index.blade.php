@@ -81,7 +81,14 @@
                     <tr>
                         <td>{{ $loop->iteration }}</td>
                         <td>
-                            <div class="fw-semibold text-dark">{{ $q->question_text }}</div>
+                            <div class="fw-semibold text-dark">
+                                {{ $q->question_text }}
+                                @if($q->is_required)
+                                    <span class="badge bg-danger-subtle text-danger border ms-1" style="font-size: 0.65rem;">Must to answer</span>
+                                @else
+                                    <span class="badge bg-light text-muted border ms-1" style="font-size: 0.65rem;">Optional</span>
+                                @endif
+                            </div>
                             @if(!empty($q->tags))
                                 @foreach($q->tags as $t)
                                     <span class="badge bg-light text-primary border" style="font-size:0.7rem;">#{{ $t }}</span>
@@ -112,7 +119,24 @@
                             <small class="text-primary fw-semibold">{{ $q->dimension->name ?? 'None' }}</small>
                         </td>
                         <td>
-                            <a href="{{ route('admin.questions.edit', $q->id) }}" class="btn btn-sm btn-light border"><i class="bi bi-pencil"></i></a>
+                            @if($q->canBeEditedBy(auth()->user()))
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ route('admin.questions.edit', $q->id) }}" class="btn btn-light border" title="Edit Question">
+                                        <i class="bi bi-pencil text-primary"></i>
+                                    </a>
+                                    <form action="{{ route('admin.questions.destroy', $q->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this question?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-light border text-danger" title="Delete Question">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            @else
+                                <span class="badge bg-light text-secondary border py-1 px-2" title="Superadmin / Global Question (Read-Only)">
+                                    <i class="bi bi-lock-fill me-1 text-warning"></i> Read-Only
+                                </span>
+                            @endif
                         </td>
                     </tr>
                 @endforeach

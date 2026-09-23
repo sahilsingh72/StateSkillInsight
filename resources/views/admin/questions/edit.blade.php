@@ -134,9 +134,12 @@
                 </div>
             </div>
 
-            <div class="form-check form-switch mb-4">
-                <input class="form-check-input" type="checkbox" name="is_required" id="is_required_toggle" value="1" {{ $question->is_required ? 'checked' : '' }}>
-                <label class="form-check-label fw-semibold" for="is_required_toggle">Required Question (Respondent cannot skip)</label>
+            <div class="form-check form-switch mb-4 p-3 bg-light rounded-3 border">
+                <input class="form-check-input ms-0 me-2" type="checkbox" name="is_required" id="is_required_toggle" value="1" {{ old('is_required', $question->is_required) ? 'checked' : '' }}>
+                <label class="form-check-label fw-semibold text-dark" for="is_required_toggle">
+                    Must to answer <span class="badge bg-danger ms-1">Required</span>
+                </label>
+                <small class="text-muted d-block mt-1">If enabled, respondents must answer this question before proceeding or submitting.</small>
             </div>
 
             <div class="mb-4">

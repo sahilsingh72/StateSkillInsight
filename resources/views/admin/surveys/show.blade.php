@@ -136,9 +136,15 @@
                                                                         </div>
                                                                     </div>
                                                                     <div class="d-flex gap-1">
-                                                                        <a href="{{ route('admin.questions.edit', $q->id) }}" class="btn btn-sm btn-light border py-0 px-2" title="Edit Question">
-                                                                            <i class="bi bi-pencil"></i>
-                                                                        </a>
+                                                                        @if($q->canBeEditedBy(auth()->user()))
+                                                                            <a href="{{ route('admin.questions.edit', $q->id) }}" class="btn btn-sm btn-light border py-0 px-2" title="Edit Question">
+                                                                                <i class="bi bi-pencil"></i>
+                                                                            </a>
+                                                                        @else
+                                                                            <span class="badge bg-light text-secondary border py-0 px-2 small" title="Superadmin / Global Question (Read-Only)">
+                                                                                <i class="bi bi-lock-fill text-warning me-1"></i> Read-Only
+                                                                            </span>
+                                                                        @endif
                                                                     </div>
                                                                 </div>
                                                             @endforeach

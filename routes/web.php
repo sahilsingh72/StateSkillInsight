@@ -21,9 +21,12 @@ use Illuminate\Support\Facades\Route;
 // Public Respondent Survey Routes
 Route::get('/', [PublicSurveyController::class, 'landing'])->name('survey.landing');
 Route::get('/locale/{locale}', [PublicSurveyController::class, 'setLocale'])->name('survey.locale');
+Route::get('/api/universities/{university}/programmes', [PublicSurveyController::class, 'getUniversityProgrammes'])->name('api.university.programmes');
+Route::get('/api/universities/{university}/departments', [PublicSurveyController::class, 'getUniversityDepartments'])->name('api.university.departments');
 Route::get('/survey/category/{category}', [PublicSurveyController::class, 'registerCategory'])->name('survey.register');
 Route::post('/survey/start', [PublicSurveyController::class, 'startSurvey'])->name('survey.start');
 Route::get('/survey/start/{token}', [PublicSurveyController::class, 'startByToken'])->name('survey.start_token');
+Route::post('/survey/start/{token}', [PublicSurveyController::class, 'completeInvitationProfile'])->name('survey.complete_invitation_profile');
 Route::get('/survey/{token}', [PublicSurveyController::class, 'takeSurvey'])->name('survey.take');
 Route::post('/survey/{token}/auto-save', [PublicSurveyController::class, 'autoSave'])->name('survey.autosave');
 Route::post('/survey/{token}/voice-upload', [VoiceResponseController::class, 'upload'])->name('survey.voice_upload');
@@ -41,6 +44,8 @@ Route::middleware(['auth'])->group(function () {
         // Institutions & Colleges Directory (Super Admin & Institution Admins)
         Route::get('/universities', [UniversityController::class, 'index'])->name('university.index');
         Route::post('/universities', [UniversityController::class, 'store'])->name('university.store');
+        Route::get('/universities/sample-csv', [UniversityController::class, 'downloadSampleCsv'])->name('university.sample_csv');
+        Route::post('/universities/import', [UniversityController::class, 'import'])->name('university.import');
         Route::get('/university/{university?}', [UniversityController::class, 'edit'])->name('university.edit');
         Route::post('/university/{university?}', [UniversityController::class, 'update'])->name('university.update');
 
@@ -72,6 +77,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/questions', [QuestionController::class, 'store'])->name('questions.store');
         Route::get('/questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
         Route::put('/questions/{question}', [QuestionController::class, 'update'])->name('questions.update');
+        Route::delete('/questions/{question}', [QuestionController::class, 'destroy'])->name('questions.destroy');
 
         // Respondents
         Route::get('/respondents', [RespondentController::class, 'index'])->name('respondents.index');
