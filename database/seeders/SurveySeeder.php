@@ -540,7 +540,7 @@ class SurveySeeder extends Seeder
                     'admission_year' => (string)(2016 + ($r % 5)),
                     'category_code' => $catCode,
                     'current_city' => $cities[$r % count($cities)],
-                    'state' => 'State Region',
+                    'state' => 'Odisha',
                     'country' => 'India',
                     'employment_status' => ($catCode === 'cat_1') ? 'Employed Full-time' : (($catCode === 'cat_2') ? 'Actively Seeking' : (($catCode === 'cat_3') ? 'Currently Studying' : 'Discontinued')),
                     'consent_given' => true,
