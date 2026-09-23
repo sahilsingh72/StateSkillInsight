@@ -190,53 +190,6 @@
         transform: translateY(4px);
     }
 
-    /* Continuum Step Line */
-    .continuum-card-box {
-        background: #ffffff;
-        border: 1px solid #cbd5e1;
-        border-radius: 24px;
-        padding: 2rem;
-        box-shadow: 0 15px 35px -10px rgba(15, 23, 42, 0.05);
-        position: relative;
-    }
-
-    .step-item {
-        background: #eff6ff;
-        border: 1.5px solid #dbeafe;
-        border-radius: 18px;
-        padding: 1.5rem 1.25rem;
-        transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-        position: relative;
-        z-index: 2;
-    }
-
-    .step-item:hover {
-        background: #ffffff;
-        border-color: var(--bw-blue-accent);
-        transform: translateY(-6px);
-        box-shadow: 0 14px 30px -8px rgba(37, 99, 235, 0.18);
-    }
-
-    .step-badge {
-        width: 38px;
-        height: 38px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, var(--bw-blue-primary), var(--bw-blue-vibrant));
-        color: #ffffff;
-        font-weight: 800;
-        font-size: 1rem;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 6px 14px rgba(37, 99, 235, 0.3);
-        margin-bottom: 0.75rem;
-        transition: transform 0.3s ease;
-    }
-
-    .step-item:hover .step-badge {
-        transform: scale(1.15) rotate(360deg);
-    }
-
     /* Category Cards Interactive Design */
     .innovative-card {
         background: #ffffff;
@@ -398,7 +351,7 @@
         </div>
 
         <h1 class="hero-heading mb-3">
-            {{ $survey->title ?? 'National University Education–Employment Continuum Research Study' }}
+            {{ $survey->title ?? 'State University Education–Employment Continuum Research Study' }}
         </h1>
         
         <p class="lead text-secondary mx-auto mb-4" style="max-width: 860px; font-size: 1.15rem; line-height: 1.75;">
@@ -414,63 +367,57 @@
 </div>
 
 <div class="container pb-4">
-    <!-- Education-Employment Continuum Explanation -->
-    <div class="mb-5 text-center animated-fade-in delay-1">
-        <h4 class="fw-bold text-dark mb-2" style="letter-spacing: -0.3px;">The Four-Category Research Continuum</h4>
-        <p class="text-secondary mb-4">Connecting student preparation to career reality for data-driven curriculum evolution.</p>
-        
-        <div class="continuum-card-box">
-            <div class="row g-3 align-items-center justify-content-center">
-                <div class="col-6 col-md-3">
-                    <div class="step-item text-center">
-                        <div class="step-badge">1</div>
-                        <h6 class="fw-bold mb-1" style="color:var(--bw-blue-deep);">Working Alumni</h6>
-                        <small class="text-secondary fw-semibold">Practice Evidence</small>
-                    </div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="step-item text-center">
-                        <div class="step-badge">2</div>
-                        <h6 class="fw-bold mb-1" style="color:var(--bw-blue-deep);">Job-Seeking Alumni</h6>
-                        <small class="text-secondary fw-semibold">Transition Evidence</small>
-                    </div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="step-item text-center">
-                        <div class="step-badge">3</div>
-                        <h6 class="fw-bold mb-1" style="color:var(--bw-blue-deep);">Current Students</h6>
-                        <small class="text-secondary fw-semibold">Pre-Graduation Readiness</small>
-                    </div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="step-item text-center">
-                        <div class="step-badge">4</div>
-                        <h6 class="fw-bold mb-1" style="color:var(--bw-blue-deep);">Dropped-out Students</h6>
-                        <small class="text-secondary fw-semibold">Re-engagement Pathways</small>
-                    </div>
-                </div>
-            </div>
+    <!-- 4 Research Category Cards Section -->
+    <div id="categories" class="mb-5 animated-fade-in delay-1">
+        <div class="text-center mb-5">
+            <span class="hero-badge-pill mb-2">
+                <i class="bi bi-diagram-3-fill" style="color:var(--bw-blue-vibrant);"></i> Research Categories
+            </span>
+            <h2 class="fw-bold text-dark mb-2" style="letter-spacing: -0.6px;">Select Your Category to Start Survey</h2>
+            <p class="text-secondary mx-auto mb-0" style="max-width: 680px; font-size: 1.05rem;">
+                Select the target research category corresponding to your current academic or professional profile to begin the survey.
+            </p>
         </div>
-    </div>
 
-    <!-- 4 Category Cards -->
-    <div id="categories" class="row g-4 mb-5 animated-fade-in delay-2">
-        @foreach($categories as $cat)
-            <div class="col-md-6 col-lg-3">
-                <div class="innovative-card h-100 p-4 text-center">
-                    <div>
-                        <div class="icon-box-glow">
-                            <i class="bi {{ $cat->icon ?? 'bi-person-badge' }} fs-1"></i>
+        <div class="row g-4">
+            @foreach($categories as $index => $cat)
+                @php
+                    $stepNum = sprintf("%02d", $index + 1);
+                    $subtitles = [
+                        'cat_1' => 'Practice Evidence',
+                        'cat_2' => 'Transition Evidence',
+                        'cat_3' => 'Pre-Graduation Readiness',
+                        'cat_4' => 'Re-engagement Pathways',
+                    ];
+                    $subTag = $subtitles[$cat->code] ?? 'Institutional Assessment';
+                    
+                    $icons = [
+                        'cat_1' => 'bi-briefcase-fill',
+                        'cat_2' => 'bi-person-workspace',
+                        'cat_3' => 'bi-mortarboard-fill',
+                        'cat_4' => 'bi-person-exclamation',
+                    ];
+                    $iconClass = $cat->icon ?: ($icons[$cat->code] ?? 'bi-person-badge');
+                @endphp
+                <div class="col-md-6 col-lg-3">
+                    <div class="innovative-card h-100 p-4 text-center">
+                        <div class="position-relative">
+                            <div class="icon-box-glow mt-2">
+                                <i class="bi {{ $iconClass }} fs-1"></i>
+                            </div>
+                            <span class="badge bg-primary-subtle text-primary fw-semibold px-3 py-1 rounded-pill mb-2 small">
+                                {{ $subTag }}
+                            </span>
+                            <h5 class="fw-bold text-dark mt-2 mb-2">{{ $cat->name }}</h5>
+                            <p class="text-secondary small mb-4" style="line-height: 1.6; min-height: 50px;">{{ $cat->description }}</p>
                         </div>
-                        <h5 class="fw-bold text-dark mb-2">{{ $cat->name }}</h5>
-                        <p class="text-secondary small mb-4" style="line-height: 1.6;">{{ $cat->description }}</p>
+                        <a href="{{ route('survey.register', $cat->code) }}" class="btn btn-action-glow w-100">
+                            Start The Survey <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
                     </div>
-                    <a href="{{ route('survey.register', $cat->code) }}" class="btn btn-action-glow w-100">
-                        Start The Survey <i class="bi bi-chevron-right ms-1"></i>
-                    </a>
                 </div>
-            </div>
-        @endforeach
+            @endforeach
+        </div>
     </div>
 
     <!-- Research Purpose & Privacy -->

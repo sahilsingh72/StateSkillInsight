@@ -20,6 +20,9 @@
                 <tr>
                     <th>Name</th>
                     <th>Email</th>
+                    @if(auth()->user()?->isSuperAdmin())
+                        <th>University</th>
+                    @endif
                     <th>Category</th>
                     <th>Status</th>
                     <th>Token Link</th>
@@ -32,6 +35,13 @@
                     <tr>
                         <td><strong>{{ $inv->name }}</strong></td>
                         <td>{{ $inv->email }}</td>
+                        @if(auth()->user()?->isSuperAdmin())
+                            <td>
+                                <span class="badge bg-secondary text-white">
+                                    {{ $inv->university?->name ?? 'Common / All' }}
+                                </span>
+                            </td>
+                        @endif
                         <td><span class="badge bg-light text-dark border">{{ $inv->category_code }}</span></td>
                         <td><span class="badge bg-info text-dark">{{ strtoupper($inv->status) }}</span></td>
                         <td>

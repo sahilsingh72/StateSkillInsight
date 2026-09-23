@@ -97,6 +97,35 @@
                 </div>
             </div>
 
+            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="bi bi-mortarboard me-2 text-primary"></i> Academic Programmes & Departments Configurator</h6>
+            <div class="row g-3 mb-4">
+                <div class="col-md-12">
+                    <label class="form-label fw-semibold">Offered Academic Programmes / Degrees (Separate by comma or new lines)</label>
+                    <textarea name="programmes_text" id="programmes_input" class="form-control" rows="4" placeholder="e.g. B.Tech&#10;MBA / Business Management&#10;MCA / Computer Applications&#10;B.Sc / Bachelor of Science">{{ old('programmes_text', is_array($university->programmes) ? implode("\n", $university->programmes) : '') }}</textarea>
+                    <div class="form-text text-muted small mt-1">
+                        <i class="bi bi-info-circle me-1"></i> Enter each programme on a new line or separated by commas. These degrees will dynamically populate in the respondent registration form when a respondent selects this institution.
+                    </div>
+                </div>
+
+                <div class="col-md-12 mt-3">
+                    <label class="form-label fw-semibold">Departments / Disciplines by Programme (Format: Programme = Dept 1, Dept 2, Dept 3)</label>
+                    @php
+                        $deptTextLines = [];
+                        if (is_array($university->departments)) {
+                            foreach ($university->departments as $progKey => $deptsArr) {
+                                if (is_array($deptsArr)) {
+                                    $deptTextLines[] = $progKey . ' = ' . implode(', ', $deptsArr);
+                                }
+                            }
+                        }
+                    @endphp
+                    <textarea name="departments_text" id="departments_input" class="form-control" rows="5" placeholder="e.g.&#10;B.Tech = Computer Science, Civil Engineering, Mechanical Engineering, Electrical & Electronics&#10;MBA = Finance, Marketing, Human Resource Management, Business Analytics&#10;MCA = Software Development, Data Science, Web & Mobile Applications">{{ old('departments_text', implode("\n", $deptTextLines)) }}</textarea>
+                    <div class="form-text text-muted small mt-1">
+                        <i class="bi bi-info-circle me-1"></i> Specify custom departments per programme using <code>Programme Name = Dept 1, Dept 2</code> format. When a respondent selects a programme, these departments will dynamically load. An <strong>Other (Please specify)</strong> option is always added automatically.
+                    </div>
+                </div>
+            </div>
+
             <h6 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="bi bi-card-text me-2 text-primary"></i> Public Header & Footer Text</h6>
             <div class="row g-3 mb-4">
                 <div class="col-md-12">

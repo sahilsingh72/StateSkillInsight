@@ -11,6 +11,7 @@ class SurveyInvitation extends Model
 
     protected $fillable = [
         'survey_id',
+        'university_id',
         'name',
         'email',
         'mobile',
@@ -34,5 +35,10 @@ class SurveyInvitation extends Model
     public function survey()
     {
         return $this->belongsTo(Survey::class);
+    }
+
+    public function university()
+    {
+        return $this->belongsTo(University::class);
     }
 }

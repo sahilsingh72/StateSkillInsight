@@ -18,7 +18,7 @@ class QuestionController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        $query = Question::with(['section.category', 'dimension', 'options', 'university', 'universities']);
+        $query = Question::with(['section.category', 'dimension', 'options', 'university', 'universities', 'creator']);
 
         if ($user && !$user->isSuperAdmin()) {
             $uniId = $user->university_id;
@@ -119,7 +119,8 @@ class QuestionController extends Controller
             $validated['university_id'] = null;
         }
 
-        $validated['is_required'] = $request->has('is_required') ? (bool)$request->input('is_required') : true;
+        $validated['is_required'] = $request->boolean('is_required');
+        $validated['created_by'] = auth()->id();
 
         $question = Question::create($validated);
 
@@ -170,14 +171,10 @@ class QuestionController extends Controller
     public function edit(Question $question)
     {
         $user = auth()->user();
-        $question->load(['options', 'translations', 'universities']);
+        $question->load(['options', 'translations', 'universities', 'creator']);
 
-        $isAssigned = (is_null($question->university_id) && $question->universities->isEmpty())
-                   || $question->university_id === $user?->university_id
-                   || $question->universities->contains('id', $user?->university_id);
-
-        if ($user && !$user->isSuperAdmin() && !$isAssigned) {
-            abort(403, 'Unauthorized access to question belonging to another institution.');
+        if (!$question->canBeEditedBy($user)) {
+            abort(403, 'Questions created by superadmin or assigned globally cannot be edited by university admins.');
         }
 
         $secQuery = SurveySection::with('category');
@@ -210,14 +207,10 @@ class QuestionController extends Controller
     public function update(Request $request, Question $question)
     {
         $user = auth()->user();
-        $question->load('universities');
+        $question->load(['universities', 'creator']);
 
-        $isAssigned = (is_null($question->university_id) && $question->universities->isEmpty())
-                   || $question->university_id === $user?->university_id
-                   || $question->universities->contains('id', $user?->university_id);
-
-        if ($user && !$user->isSuperAdmin() && !$isAssigned) {
-            abort(403, 'Unauthorized access to update question belonging to another institution.');
+        if (!$question->canBeEditedBy($user)) {
+            abort(403, 'Questions created by superadmin or assigned globally cannot be updated by university admins.');
         }
 
         $validated = $request->validate([
@@ -248,7 +241,7 @@ class QuestionController extends Controller
             $validated['university_id'] = null;
         }
 
-        $validated['is_required'] = $request->has('is_required') ? (bool)$request->input('is_required') : false;
+        $validated['is_required'] = $request->boolean('is_required');
 
         $question->update($validated);
 
@@ -297,5 +290,24 @@ class QuestionController extends Controller
         AuditLog::log('updated_question', 'Question', $question->id);
 
         return redirect()->route('admin.questions.index')->with('success', 'Question updated successfully!');
+    }
+
+    public function destroy(Request $request, Question $question)
+    {
+        $user = auth()->user();
+        $question->load('creator');
+
+        if (!$question->canBeEditedBy($user)) {
+            abort(403, 'Questions created by superadmin or assigned globally cannot be deleted by university admins.');
+        }
+
+        AuditLog::log('deleted_question', 'Question', $question->id);
+
+        $question->options()->delete();
+        $question->translations()->delete();
+        $question->universities()->detach();
+        $question->delete();
+
+        return redirect()->route('admin.questions.index')->with('success', 'Question deleted successfully!');
     }
 }

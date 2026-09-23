@@ -13,6 +13,8 @@ class University extends Model
         'name',
         'short_name',
         'type',
+        'programmes',
+        'departments',
         'parent_id',
         'logo',
         'favicon',
@@ -33,7 +35,51 @@ class University extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        'programmes' => 'array',
+        'departments' => 'array',
     ];
+
+    public function getAvailableProgrammesAttribute()
+    {
+        if (!empty($this->programmes) && is_array($this->programmes) && count($this->programmes) > 0) {
+            $list = array_values(array_filter(array_map('trim', $this->programmes)));
+            if (!in_array('Other', $list)) {
+                $list[] = 'Other';
+            }
+            return $list;
+        }
+
+        return ['Other'];
+    }
+
+    public function getDepartmentsForProgramme($programmeName = null)
+    {
+        $customDepartments = $this->departments;
+
+        if (!empty($customDepartments) && is_array($customDepartments)) {
+            if ($programmeName && isset($customDepartments[$programmeName]) && is_array($customDepartments[$programmeName])) {
+                $list = array_values(array_filter(array_map('trim', $customDepartments[$programmeName])));
+                if (!in_array('Other', $list)) {
+                    $list[] = 'Other';
+                }
+                return $list;
+            }
+
+            if ($programmeName) {
+                foreach ($customDepartments as $key => $depts) {
+                    if (is_array($depts) && (strcasecmp($key, $programmeName) === 0 || stripos($programmeName, $key) !== false)) {
+                        $list = array_values(array_filter(array_map('trim', $depts)));
+                        if (!in_array('Other', $list)) {
+                            $list[] = 'Other';
+                        }
+                        return $list;
+                    }
+                }
+            }
+        }
+
+        return ['Other'];
+    }
 
     public function parent()
     {

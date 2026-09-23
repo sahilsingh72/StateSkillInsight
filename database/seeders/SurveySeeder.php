@@ -542,7 +542,7 @@ class SurveySeeder extends Seeder
                     'current_city' => $cities[$r % count($cities)],
                     'state' => 'State Region',
                     'country' => 'India',
-                    'employment_status' => ($catCode === 'cat_1') ? 'Employed Full-time' : (($catCode === 'cat_2') ? 'Actively Seeking' : (($catCode === 'cat_3') ? 'Enrolled Student' : 'Discontinued')),
+                    'employment_status' => ($catCode === 'cat_1') ? 'Employed Full-time' : (($catCode === 'cat_2') ? 'Actively Seeking' : (($catCode === 'cat_3') ? 'Currently Studying' : 'Discontinued')),
                     'consent_given' => true,
                     'consent_at' => now()->subDays(rand(1, 30)),
                 ]);

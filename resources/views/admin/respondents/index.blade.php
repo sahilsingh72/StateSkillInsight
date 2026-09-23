@@ -38,12 +38,13 @@
                 <tr>
                     <th>Respondent Name</th>
                     @if(auth()->check() && auth()->user()->isSuperAdmin())
-                        <th>Institution / University</th>
+                        <th>Organisation</th>
                     @endif
+                    <th>Survey</th>
                     <th>Category</th>
                     <th>Programme & Dept</th>
                     <th>Grad Year</th>
-                    <th>City / Location</th>
+                    <th>Location</th>
                     <th>Date</th>
                     <th>Action</th>
                 </tr>
@@ -66,6 +67,23 @@
                                 @endif
                             </td>
                         @endif
+                        <td>
+                            @php
+                                $surveyObj = $r->respondentSurveys->first()?->survey;
+                                $surveyTitle = $surveyObj?->title ?? 'State Skill Insight Survey';
+                                $words = preg_split('/\s+/', trim($surveyTitle));
+                                $acronym = '';
+                                foreach ($words as $w) {
+                                    $cleanWord = preg_replace('/[^a-zA-Z]/', '', $w);
+                                    if (!empty($cleanWord)) {
+                                        $acronym .= strtoupper(mb_substr($cleanWord, 0, 1));
+                                    }
+                                }
+                            @endphp
+                            <span class="badge bg-info-subtle text-info border" title="{{ $surveyTitle }}">
+                                <i class="bi bi-file-earmark-text me-1"></i> {{ $acronym }}
+                            </span>
+                        </td>
                         <td>
                             <span class="badge bg-light text-primary border">{{ $r->category_code }}</span>
                         </td>

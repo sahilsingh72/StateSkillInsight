@@ -61,7 +61,7 @@
             <p class="text-secondary small mb-4">{{ $currentSection->description }}</p>
 
             @foreach($currentSection->questions as $qIdx => $q)
-                <div class="question-card p-4 rounded-4 border mb-4 bg-white question-block" id="q_block_{{ $q->id }}" data-question-id="{{ $q->id }}">
+                <div class="question-card p-4 rounded-4 border mb-4 bg-white question-block" id="q_block_{{ $q->id }}" data-question-id="{{ $q->id }}" data-required="{{ $q->is_required ? '1' : '0' }}" data-type="{{ $q->type }}">
                     <div class="d-flex align-items-start gap-2 mb-3">
                         <span class="badge bg-light text-dark border rounded-circle fs-6 p-2" style="width:32px; height:32px; display:inline-flex; align-items:center; justify-content:center;">
                             {{ $qIdx + 1 }}
@@ -69,7 +69,10 @@
                         <div>
                             <h6 class="fw-bold text-dark mb-1">
                                 {{ $q->getTranslationText($locale) }}
-                                @if($q->is_required) <span class="text-danger">*</span> @endif
+                                @if($q->is_required)
+                                    <span class="text-danger" title="Required Question">*</span>
+                                    <span class="badge bg-danger-subtle text-danger border ms-1" style="font-size:0.65rem;">Required</span>
+                                @endif
                             </h6>
                             @if($q->help_text)
                                 <small class="text-muted"><i class="bi bi-info-circle me-1"></i> {{ $q->help_text }}</small>
@@ -155,7 +158,7 @@
                                     </button>
                                 </div>
                                 <audio id="audioPreview_{{ $q->id }}" controls class="w-100 d-none mt-2"></audio>
-                                <span class="badge bg-success d-none mt-2" id="uploadStatus_{{ $q->id }}"><i class="bi bi-check-all me-1"></i> Audio Uploaded</span>
+                                <span class="badge bg-success {{ isset($existingResponses[$q->id]) ? '' : 'd-none' }} mt-2" id="uploadStatus_{{ $q->id }}"><i class="bi bi-check-all me-1"></i> Audio Uploaded</span>
                             </div>
 
                         @else
@@ -173,21 +176,21 @@
                 @endphp
 
                 @if($prevSec)
-                    <a href="{{ route('survey.take', ['token' => $respondent->token, 'section' => $prevSec->id]) }}" class="btn btn-outline-secondary px-4">
+                    <button type="button" onclick="navigateSection('{{ route('survey.take', ['token' => $respondent->token, 'section' => $prevSec->id]) }}', false)" class="btn btn-outline-secondary px-4">
                         <i class="bi bi-arrow-left me-1"></i> Previous Section
-                    </a>
+                    </button>
                 @else
                     <div></div>
                 @endif
 
                 @if($nextSec)
-                    <a href="{{ route('survey.take', ['token' => $respondent->token, 'section' => $nextSec->id]) }}" class="btn btn-uni-primary px-4">
+                    <button type="button" onclick="navigateSection('{{ route('survey.take', ['token' => $respondent->token, 'section' => $nextSec->id]) }}', true)" class="btn btn-uni-primary px-4 fw-bold">
                         Next Section <i class="bi bi-arrow-right ms-1"></i>
-                    </a>
+                    </button>
                 @else
-                    <a href="{{ route('survey.review', ['token' => $respondent->token]) }}" class="btn btn-success px-4 fw-bold">
+                    <button type="button" onclick="navigateSection('{{ route('survey.review', ['token' => $respondent->token]) }}', true)" class="btn btn-success px-4 fw-bold">
                         Review & Submit <i class="bi bi-check-circle ms-1"></i>
-                    </a>
+                    </button>
                 @endif
             </div>
         </div>
@@ -204,9 +207,107 @@
     // Auto save trigger on change
     document.querySelectorAll('.q-input').forEach(input => {
         input.addEventListener('change', function() {
+            const block = this.closest('.question-block');
+            if (block) {
+                block.classList.remove('border-danger', 'bg-danger-subtle');
+                const errEl = block.querySelector('.required-error-msg');
+                if (errEl) errEl.classList.add('d-none');
+            }
             triggerAutoSave();
         });
     });
+
+    function validateSection() {
+        let isValid = true;
+        let firstUnansweredBlock = null;
+
+        document.querySelectorAll('.question-block').forEach(block => {
+            const isRequired = block.getAttribute('data-required') === '1';
+            const qId = block.getAttribute('data-question-id');
+            const qType = block.getAttribute('data-type');
+            let errElement = block.querySelector('.required-error-msg');
+
+            // Reset error state
+            block.classList.remove('border-danger', 'bg-danger-subtle');
+            if (errElement) errElement.classList.add('d-none');
+
+            if (!isRequired) return;
+
+            let answered = false;
+
+            if (qType === 'single_choice' || qType === 'likert' || qType === 'yes_no' || qType === 'rating') {
+                const checked = block.querySelector('input[type="radio"]:checked');
+                if (checked && checked.value !== '') answered = true;
+            } else if (qType === 'multiple_choice') {
+                const checked = block.querySelectorAll('input[type="checkbox"]:checked');
+                if (checked && checked.length > 0) answered = true;
+            } else if (qType === 'dropdown') {
+                const select = block.querySelector('select');
+                if (select && select.value && select.value.trim() !== '') answered = true;
+            } else if (qType === 'short_text' || qType === 'long_text') {
+                const input = block.querySelector('input[type="text"], textarea');
+                if (input && input.value && input.value.trim() !== '') answered = true;
+            } else if (qType === 'voice') {
+                const uploadStatus = document.getElementById(`uploadStatus_${qId}`);
+                if (uploadStatus && !uploadStatus.classList.contains('d-none')) answered = true;
+            } else {
+                const anyInput = block.querySelector('.q-input');
+                if (anyInput && anyInput.value && anyInput.value.trim() !== '') answered = true;
+            }
+
+            if (!answered) {
+                isValid = false;
+                block.classList.add('border-danger', 'bg-danger-subtle');
+                
+                if (!errElement) {
+                    errElement = document.createElement('div');
+                    errElement.className = 'required-error-msg text-danger small mt-2 fw-semibold';
+                    errElement.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> This question is required. Please provide an answer before proceeding.';
+                    block.querySelector('.ps-4').appendChild(errElement);
+                } else {
+                    errElement.classList.remove('d-none');
+                }
+
+                if (!firstUnansweredBlock) {
+                    firstUnansweredBlock = block;
+                }
+            }
+        });
+
+        if (!isValid && firstUnansweredBlock) {
+            firstUnansweredBlock.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        return isValid;
+    }
+
+    function navigateSection(targetUrl, validate = true) {
+        if (validate && !validateSection()) {
+            return false;
+        }
+
+        const form = document.getElementById('questionnaireForm');
+        if (!form) {
+            window.location.href = targetUrl;
+            return;
+        }
+
+        const formData = new FormData(form);
+
+        fetch("{{ route('survey.autosave', $respondent->token) }}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            }
+        })
+        .then(() => {
+            window.location.href = targetUrl;
+        })
+        .catch(() => {
+            window.location.href = targetUrl;
+        });
+    }
 
     function triggerAutoSave() {
         const badge = document.getElementById('autoSaveBadge');
