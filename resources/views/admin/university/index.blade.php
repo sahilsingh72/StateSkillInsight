@@ -21,9 +21,10 @@
 <!-- Filter & Search Controls Bar -->
 <div class="card-custom p-3 mb-4">
     <form method="GET" action="{{ route('admin.university.index') }}" id="institutionFilterForm">
+        <input type="hidden" name="per_page" id="perPageInput" value="{{ request('per_page', 10) }}">
         <div class="row g-2 align-items-center">
             <!-- Keyword Search -->
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <label class="form-label text-muted small fw-semibold mb-1"><i class="bi bi-search me-1"></i> Search Institution</label>
                 <div class="input-group input-group-sm">
                     <span class="input-group-text bg-light border-end-0"><i class="bi bi-building"></i></span>
@@ -45,23 +46,12 @@
             </div>
 
             <!-- Parent University Filter -->
-            <div class="col-md-2">
-                <label class="form-label text-muted small fw-semibold mb-1"><i class="bi bi-diagram-3 me-1"></i> Parent University</label>
+            <div class="col-md-3">
+                <label class="form-label text-muted small fw-semibold mb-1"><i class="bi bi-diagram-3 me-1"></i> Affiliating University</label>
                 <select name="parent_id" class="form-select form-select-sm" onchange="document.getElementById('institutionFilterForm').submit()">
-                    <option value="">All Parent Unis</option>
+                    <option value="">All Affiliating University</option>
                     @foreach($parentUniversities as $pUni)
                         <option value="{{ $pUni->id }}" {{ request('parent_id') == $pUni->id ? 'selected' : '' }}>{{ $pUni->short_name }} - {{ Str::limit($pUni->name, 22) }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <!-- State Filter -->
-            <div class="col-md-2">
-                <label class="form-label text-muted small fw-semibold mb-1"><i class="bi bi-geo-alt me-1"></i> State / Region</label>
-                <select name="state" class="form-select form-select-sm" onchange="document.getElementById('institutionFilterForm').submit()">
-                    <option value="">All States</option>
-                    @foreach($states as $st)
-                        <option value="{{ $st }}" {{ request('state') === $st ? 'selected' : '' }}>{{ $st }}</option>
                     @endforeach
                 </select>
             </div>
@@ -70,10 +60,10 @@
             <div class="col-md-2">
                 <label class="form-label text-muted small fw-semibold mb-1"><i class="bi bi-sort-down me-1"></i> Sort By</label>
                 <select name="sort" class="form-select form-select-sm" onchange="document.getElementById('institutionFilterForm').submit()">
-                    <option value="latest" {{ request('sort', 'latest') === 'latest' ? 'selected' : '' }}>Latest Enrolled</option>
-                    <option value="oldest" {{ request('sort') === 'oldest' ? 'selected' : '' }}>Oldest Enrolled</option>
-                    <option value="name_asc" {{ request('sort') === 'name_asc' ? 'selected' : '' }}>Name (A to Z)</option>
+                    <option value="name_asc" {{ request('sort', 'name_asc') === 'name_asc' ? 'selected' : '' }}>Name (A to Z)</option>
                     <option value="name_desc" {{ request('sort') === 'name_desc' ? 'selected' : '' }}>Name (Z to A)</option>
+                    <option value="latest" {{ request('sort') === 'latest' ? 'selected' : '' }}>Latest Enrolled</option>
+                    <option value="oldest" {{ request('sort') === 'oldest' ? 'selected' : '' }}>Oldest Enrolled</option>
                     <option value="type" {{ request('sort') === 'type' ? 'selected' : '' }}>Classification Type</option>
                 </select>
             </div>
@@ -85,7 +75,7 @@
                 <span class="badge bg-light text-secondary border px-2 py-1 small">
                     <i class="bi bi-building me-1"></i> {{ $institutions->total() }} {{ Str::plural('Institution', $institutions->total()) }} Found
                 </span>
-                @if(request()->anyFilled(['search', 'type', 'parent_id', 'state', 'sort']))
+                @if(request()->anyFilled(['search', 'type', 'parent_id', 'sort']))
                     <span class="badge bg-primary-subtle text-primary border px-2 py-1 small">
                         <i class="bi bi-funnel-fill me-1"></i> Filters Active
                     </span>
@@ -93,7 +83,7 @@
             </div>
 
             <div class="d-flex gap-2">
-                @if(request()->anyFilled(['search', 'type', 'parent_id', 'state', 'sort']))
+                @if(request()->anyFilled(['search', 'type', 'parent_id', 'sort']))
                     <a href="{{ route('admin.university.index') }}" class="btn btn-sm btn-outline-secondary">
                         <i class="bi bi-x-circle me-1"></i> Reset Filters
                     </a>
@@ -111,6 +101,7 @@
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
+                    <th style="width: 50px;">Sno</th>
                     <th>Institution Name</th>
                     <th>Code</th>
                     <th>Classification Type</th>
@@ -120,8 +111,9 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($institutions as $inst)
-                    <tr>
+                @foreach($institutions as $count => $inst)
+                    <tr id="institution-row-{{ $inst->id }}">
+                        <td class="text-muted fw-semibold">{{ ($institutions->firstItem() ?? 1) + $count }}</td>
                         <td>
                             <strong>{{ $inst->name }}</strong>
                             @if($inst->tagline)<br><small class="text-muted">{{ $inst->tagline }}</small>@endif
@@ -143,16 +135,24 @@
                         <td>
                             @if($inst->type === 'affiliated_college')
                                 @if($inst->parent)
-                                    <small class="fw-semibold text-primary d-block"><i class="bi bi-link-45deg me-1"></i> Affiliated under: {{ $inst->parent->name }}</small>
+                                    <a href="javascript:void(0)" 
+                                       class="fw-semibold text-primary text-decoration-none d-block text-start small"
+                                       onclick="showAffiliatedColleges({{ $inst->parent->id }}, '{{ addslashes($inst->parent->name) }}', '{{ addslashes($inst->parent->short_name) }}')"
+                                       title="Click to view all colleges affiliated under {{ $inst->parent->name }}">
+                                        <i class="bi bi-link-45deg me-1"></i>Affiliated under: {{ $inst->parent->name }}
+                                    </a>
                                 @else
-                                    <small class="text-warning">Affiliated College (Parent Uni Pending)</small>
+                                    <small class="text-warning">Affiliated College (Affiliating Uni Pending)</small>
                                 @endif
                             @elseif($inst->type === 'university')
-                                <small class="text-dark fw-semibold d-block">Parent University</small>
+                                <small class="text-muted fw-semibold d-block">Affiliating University</small>
                                 @if($inst->colleges->count() > 0)
-                                    <span class="badge bg-light text-secondary border mt-1">
-                                        <i class="bi bi-diagram-3 me-1"></i> {{ $inst->colleges->count() }} Affiliated {{ Str::plural('College', $inst->colleges->count()) }} Working Under
-                                    </span>
+                                    <a href="javascript:void(0)" 
+                                       class="fw-semibold text-primary text-decoration-none d-block text-start mt-1 small" 
+                                       onclick="showAffiliatedColleges({{ $inst->id }}, '{{ addslashes($inst->name) }}', '{{ addslashes($inst->short_name) }}')"
+                                       title="Click to view affiliated colleges under {{ $inst->name }}">
+                                        <i class="bi bi-diagram-2 me-1"></i>{{ $inst->colleges->count() }} Affiliated {{ Str::plural('College', $inst->colleges->count()) }} Working Under
+                                    </a>
                                 @else
                                     <small class="text-muted">No affiliated colleges enrolled yet under this university</small>
                                 @endif
@@ -172,7 +172,7 @@
                             <div class="d-flex gap-1">
                                 @if($inst->type === 'university')
                                     <button class="btn btn-sm btn-outline-primary" onclick="addCollegeUnderUni({{ $inst->id }}, '{{ addslashes($inst->name) }}')" title="Add Affiliated College Working Under This University">
-                                        <i class="bi bi-plus-circle me-1"></i> + Add College Under Uni
+                                        <i class="bi bi-plus-circle me-1"></i> Add College Under University
                                     </button>
                                 @endif
                                 <a href="{{ route('admin.university.edit', $inst->id) }}" class="btn btn-sm btn-outline-secondary">
@@ -185,8 +185,26 @@
             </tbody>
         </table>
     </div>
-    <div class="mt-3">
-        {{ $institutions->links() }}
+    <!-- Pagination & Entries Summary Footer -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 mt-4 pt-3 border-top">
+        <div class="d-flex align-items-center gap-3">
+            <span class="text-muted small">
+                Showing <strong class="text-dark">{{ $institutions->firstItem() ?? 0 }}</strong> to <strong class="text-dark">{{ $institutions->lastItem() ?? 0 }}</strong> of <strong class="text-dark">{{ $institutions->total() }}</strong> institutions
+            </span>
+            <div class="d-flex align-items-center gap-1">
+                <label class="text-muted small mb-0 text-nowrap">Per page:</label>
+                <select class="form-select form-select-sm" style="width: 75px;" onchange="document.getElementById('perPageInput').value = this.value; document.getElementById('institutionFilterForm').submit();">
+                    <option value="5" {{ request('per_page', 10) == 5 ? 'selected' : '' }}>5</option>
+                    <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
+                    <option value="15" {{ request('per_page', 10) == 15 ? 'selected' : '' }}>15</option>
+                    <option value="25" {{ request('per_page', 10) == 25 ? 'selected' : '' }}>25</option>
+                    <option value="50" {{ request('per_page', 10) == 50 ? 'selected' : '' }}>50</option>
+                </select>
+            </div>
+        </div>
+        <div>
+            {{ $institutions->links() }}
+        </div>
     </div>
 </div>
 
@@ -218,7 +236,7 @@
                                 <option value="ini">Institute of National Importance (IIT / NIT / IIM / AIIMS)</option>
                                 <option value="university" selected>Central / State University</option>
                                 <option value="autonomous_college">Autonomous College (Independent Academic Autonomy)</option>
-                                <option value="affiliated_college">Affiliated College (Works Under Parent University)</option>
+                                <option value="affiliated_college">Affiliated College (Works Under Affiliating University)</option>
                                 <option value="polytechnic_iti">Polytechnic & ITI (Technical / Vocational Skill Institute)</option>
                             </select>
                         </div>
@@ -233,15 +251,15 @@
                         <!-- Parent University Selection (Active when Affiliated College is selected) -->
                         <div class="col-md-12" id="parent_uni_container" style="display: none;">
                             <div class="p-3 bg-light rounded-3 border border-primary-subtle">
-                                <label class="form-label fw-bold text-dark mb-1"><i class="bi bi-diagram-3 me-1 text-primary"></i> Parent University (Affiliating University) <span class="text-danger">*</span></label>
+                                <label class="form-label fw-bold text-dark mb-1"><i class="bi bi-diagram-3 me-1 text-primary"></i> Affiliating University<span class="text-danger">*</span></label>
                                 <select name="parent_id" id="parent_id_select" class="form-select border-primary">
-                                    <option value="">-- Select Existing Parent University --</option>
+                                    <option value="">-- Select Existing Affiliating University --</option>
                                     @foreach($parentUniversities as $pUni)
                                         <option value="{{ $pUni->id }}">{{ $pUni->name }} ({{ $pUni->short_name }})</option>
                                     @endforeach
                                 </select>
                                 <small class="text-muted d-block mt-2">
-                                    This college will be registered as an affiliated college working under the selected Parent University.
+                                    This college will be registered as an affiliated college working under the selected Affiliating University.
                                 </small>
                             </div>
                         </div>
@@ -264,7 +282,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">State / Territory</label>
-                            <input type="text" name="state" class="form-control" value="State Region">
+                            <input type="text" name="state" class="form-control" value="Odisha">
                         </div>
                     </div>
                 </div>
@@ -285,7 +303,7 @@
                 @csrf
                 <div class="modal-header border-bottom">
                     <h5 class="modal-title fw-bold text-dark">
-                        <i class="bi bi-file-earmark-spreadsheet text-primary me-2"></i> Bulk Import Institutions (CSV Upload)
+                        <i class="bi bi-file-earmark-spreadsheet text-primary me-2"></i> Bulk Import Institutions
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -293,16 +311,16 @@
                     <div class="alert alert-info border-info-subtle d-flex align-items-start gap-3 mb-4">
                         <i class="bi bi-info-circle-fill fs-4 text-info flex-shrink-0"></i>
                         <div class="small">
-                            <strong class="d-block mb-1 text-dark">Instructions for Bulk CSV Import:</strong>
+                            <strong class="d-block mb-1 text-dark">Instructions for Bulk Import:</strong>
                             <ul class="mb-2 ps-3">
-                                <li>Upload a <code>.csv</code> file containing the list of institutes to enroll in bulk.</li>
+                                <li>Upload a <code>.xlsx</code> file containing the list of institutes to enroll in bulk.</li>
                                 <li>Required columns: <strong>Name</strong>, <strong>Short Name</strong>.</li>
                                 <li>In the <code>Type</code> column, choose any of the 5 exact classification options:
                                     <ol class="mt-1 mb-1 ps-3">
                                         <li><code>Institute of National Importance (IIT / NIT / IIM / AIIMS)</code></li>
                                         <li><code>Central / State University</code></li>
                                         <li><code>Autonomous College (Independent Academic Autonomy)</code></li>
-                                        <li><code>Affiliated College (Works Under Parent University)</code></li>
+                                        <li><code>Affiliated College (Works Under Affiliating University)</code></li>
                                         <li><code>Polytechnic & ITI (Technical / Skill Institute)</code></li>
                                     </ol>
                                 </li>
@@ -315,13 +333,13 @@
                     </div>
 
                     <div class="mb-4">
-                        <label class="form-label fw-bold text-dark">Choose Spreadsheet / CSV File to Upload <span class="text-danger">*</span></label>
+                        <label class="form-label fw-bold text-dark">Choose Spreadsheet / xlsx File to Upload <span class="text-danger">*</span></label>
                         <input type="file" name="import_file" class="form-control form-control-lg border-primary" accept=".xlsx, .xls, .csv, .txt" required>
-                        <small class="text-muted d-block mt-1">Accepted formats: .xlsx, .xls, .csv, .txt (Max file size: 10MB)</small>
+                        <small class="text-muted d-block mt-1">Accepted formats: .xlsx(Max file size: 10MB)</small>
                     </div>
 
                     <div class="p-3 bg-light rounded-3 border">
-                        <h6 class="fw-bold text-dark small mb-2"><i class="bi bi-table me-1 text-secondary"></i> Expected CSV Header & Data Format:</h6>
+                        <h6 class="fw-bold text-dark small mb-2"><i class="bi bi-table me-1 text-secondary"></i> Expected Header & Data Format:</h6>
                         <div class="table-responsive">
                             <table class="table table-sm table-bordered bg-white text-nowrap small mb-0">
                                 <thead class="table-light">
@@ -383,7 +401,159 @@
     </div>
 </div>
 
+<!-- Modal: View Affiliated Colleges Working Under University -->
+<div class="modal fade" id="affiliatedCollegesModal" tabindex="-1" aria-labelledby="affiliatedCollegesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-bottom bg-light py-3 px-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                        <i class="bi bi-diagram-3-fill fs-5"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <h5 class="modal-title fw-bold text-dark mb-0" id="affiliatedCollegesModalLabel">
+                                Affiliated Colleges Under <span id="affUniName" class="text-primary"></span>
+                            </h5>
+                            <span class="badge bg-primary text-white" id="affUniCode"></span>
+                        </div>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle me-1"></i> Colleges and academic institutions officially affiliated & operating under this parent university &bull; 
+                            <span id="affCollegesCountBadge" class="fw-semibold text-dark"></span>
+                        </small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle border mb-0" id="affiliatedCollegesTable">
+                        <thead class="table-light">
+                            <tr class="small text-uppercase text-secondary">
+                                <th style="width: 45px;">Sno</th>
+                                <th>College / Institution Name</th>
+                                <th>Code</th>
+                                <th>Contact Information</th>
+                                <th>Location</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="affiliatedCollegesTableBody">
+                            <!-- Populated dynamically via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="noAffiliatedCollegesAlert" class="text-center py-5 text-muted" style="display: none;">
+                    <i class="bi bi-diagram-3 fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                    <h6 class="fw-bold">No Affiliated Colleges Found</h6>
+                    <p class="small text-secondary mb-0">No colleges are currently registered under this parent university.</p>
+                </div>
+            </div>
+            <div class="modal-footer border-top bg-light py-3 px-4 d-flex justify-content-between align-items-center">
+                <button type="button" class="btn btn-light border px-3" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary-custom px-3" id="modalAddCollegeBtn">
+                    <i class="bi bi-plus-circle me-1"></i> Enroll Affiliated College Under This University
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+const affiliatedCollegesData = {
+    @foreach($parentUniversities as $pUni)
+        "{{ $pUni->id }}": @json($pUni->colleges),
+    @endforeach
+};
+
+let currentAffUniId = null;
+let currentAffUniName = '';
+
+function showAffiliatedColleges(uniId, uniName, uniCode) {
+    currentAffUniId = uniId;
+    currentAffUniName = uniName;
+
+    document.getElementById('affUniName').innerText = uniName;
+    document.getElementById('affUniCode').innerText = uniCode;
+
+    const colleges = (affiliatedCollegesData[uniId] || []).slice();
+    colleges.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    const countBadge = document.getElementById('affCollegesCountBadge');
+    countBadge.innerText = `${colleges.length} ${colleges.length === 1 ? 'College' : 'Colleges'} Found`;
+
+    const tbody = document.getElementById('affiliatedCollegesTableBody');
+    const tableEl = document.getElementById('affiliatedCollegesTable');
+    const noAlert = document.getElementById('noAffiliatedCollegesAlert');
+    tbody.innerHTML = '';
+
+    if (!colleges || colleges.length === 0) {
+        tableEl.style.display = 'none';
+        noAlert.style.display = 'block';
+    } else {
+        tableEl.style.display = '';
+        noAlert.style.display = 'none';
+
+        colleges.forEach((c, index) => {
+            const tr = document.createElement('tr');
+            const editUrl = "{{ url('/university') }}/" + c.id;
+
+            const contactDetails = [];
+            if (c.email) {
+                contactDetails.push(`<div><i class="bi bi-envelope me-1 text-muted"></i><a href="mailto:${c.email}" class="text-decoration-none">${c.email}</a></div>`);
+            }
+            if (c.phone) {
+                contactDetails.push(`<div><i class="bi bi-telephone me-1 text-muted"></i>${c.phone}</div>`);
+            }
+            if (c.website) {
+                contactDetails.push(`<div><i class="bi bi-globe me-1 text-muted"></i><a href="${c.website}" target="_blank" class="text-decoration-none text-truncate d-inline-block" style="max-width: 220px;">${c.website}</a></div>`);
+            }
+            const contactHtml = contactDetails.length > 0 ? contactDetails.join('') : '<span class="text-muted small">Not provided</span>';
+
+            const locationDetails = [];
+            if (c.address) {
+                locationDetails.push(`<div class="small text-truncate" style="max-width: 200px;" title="${c.address}"><i class="bi bi-geo-alt me-1 text-muted"></i>${c.address}</div>`);
+            }
+            if (c.state) {
+                locationDetails.push(`<span class="badge bg-light text-secondary border small mt-1">${c.state}</span>`);
+            }
+            const locationHtml = locationDetails.length > 0 ? locationDetails.join('') : '<span class="text-muted small">Not specified</span>';
+
+            const statusBadge = c.is_active ? 
+                '<span class="badge bg-success-subtle text-success border"><i class="bi bi-check-circle me-1"></i> Active</span>' :
+                '<span class="badge bg-secondary-subtle text-secondary border"><i class="bi bi-pause-circle me-1"></i> Inactive</span>';
+
+            tr.innerHTML = `
+                <td class="text-muted small fw-semibold">${index + 1}</td>
+                <td>
+                    <div class="fw-bold text-dark">${c.name}</div>
+                    ${c.tagline ? `<small class="text-muted">${c.tagline}</small>` : ''}
+                </td>
+                <td><span class="badge bg-light text-dark border fw-semibold">${c.short_name || 'N/A'}</span></td>
+                <td><div class="small">${contactHtml}</div></td>
+                <td>${locationHtml}</td>
+                <td class="text-end">
+                    <a href="${editUrl}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-pencil me-1"></i> Edit
+                    </a>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // Bind Add College button in modal footer
+    document.getElementById('modalAddCollegeBtn').onclick = function() {
+        const affModal = bootstrap.Modal.getInstance(document.getElementById('affiliatedCollegesModal'));
+        if (affModal) {
+            affModal.hide();
+        }
+        addCollegeUnderUni(currentAffUniId, currentAffUniName);
+    };
+
+    const modal = new bootstrap.Modal(document.getElementById('affiliatedCollegesModal'));
+    modal.show();
+}
+
 function onTypeChange(type) {
     const parentContainer = document.getElementById('parent_uni_container');
     const parentSelect = document.getElementById('parent_id_select');

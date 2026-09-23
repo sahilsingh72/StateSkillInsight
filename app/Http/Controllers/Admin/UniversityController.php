@@ -21,7 +21,9 @@ class UniversityController extends Controller
             abort(403, 'Unauthorized. Institution Enrollment directory is reserved for Super Administrator role only.');
         }
 
-        $query = University::with('parent', 'colleges');
+        $query = University::with(['parent', 'colleges' => function ($q) {
+            $q->orderBy('name', 'asc');
+        }]);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -45,17 +47,22 @@ class UniversityController extends Controller
             $query->where('state', $request->state);
         }
 
-        $sort = $request->get('sort', 'latest');
+        $sort = $request->get('sort', 'name_asc');
         match ($sort) {
             'oldest' => $query->oldest(),
-            'name_asc' => $query->orderBy('name', 'asc'),
+            'latest' => $query->latest(),
             'name_desc' => $query->orderBy('name', 'desc'),
             'type' => $query->orderBy('type', 'asc'),
-            default => $query->latest(),
+            default => $query->orderBy('name', 'asc'),
         };
 
-        $institutions = $query->paginate(15)->withQueryString();
-        $parentUniversities = University::where('type', 'university')->orderBy('name')->get();
+        $perPage = (int) $request->get('per_page', 10);
+        if (!in_array($perPage, [5, 10, 15, 25, 50, 100])) {
+            $perPage = 10;
+        }
+
+        $institutions = $query->paginate($perPage)->withQueryString();
+        $parentUniversities = University::where('type', 'university')->with('colleges')->orderBy('name')->get();
         $states = University::whereNotNull('state')->where('state', '!=', '')->distinct()->orderBy('state')->pluck('state');
 
         return view('admin.university.index', compact('institutions', 'parentUniversities', 'states'));
