@@ -14,7 +14,7 @@ class SectionController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        $query = SurveySection::with(['category', 'university', 'universities'])->withCount('questions');
+        $query = SurveySection::with(['category', 'university', 'universities']);
 
         if ($user && !$user->isSuperAdmin()) {
             $uniId = $user->university_id;
@@ -28,6 +28,46 @@ class SectionController extends Controller
                     $uq->where('universities.id', $uniId);
                 });
             });
+
+            // Count questions accessible to this institution (global, directly assigned, or parent section assigned)
+            $query->withCount(['questions' => function ($q) use ($uniId) {
+                $q->where(function ($sub) use ($uniId) {
+                    $sub->where(function ($gq) {
+                        $gq->whereNull('university_id')->whereDoesntHave('universities');
+                    })
+                    ->orWhere('university_id', $uniId)
+                    ->orWhereHas('universities', function ($uq) use ($uniId) {
+                        $uq->where('universities.id', $uniId);
+                    })
+                    ->orWhereHas('section', function ($secQ) use ($uniId) {
+                        $secQ->where('university_id', $uniId)
+                             ->orWhereHas('universities', function ($secUQ) use ($uniId) {
+                                 $secUQ->where('universities.id', $uniId);
+                             });
+                    });
+                });
+            }]);
+
+            // Eager load questions accessible to this institution
+            $query->with(['questions' => function ($q) use ($uniId) {
+                $q->where(function ($sub) use ($uniId) {
+                    $sub->where(function ($gq) {
+                        $gq->whereNull('university_id')->whereDoesntHave('universities');
+                    })
+                    ->orWhere('university_id', $uniId)
+                    ->orWhereHas('universities', function ($uq) use ($uniId) {
+                        $uq->where('universities.id', $uniId);
+                    })
+                    ->orWhereHas('section', function ($secQ) use ($uniId) {
+                        $secQ->where('university_id', $uniId)
+                             ->orWhereHas('universities', function ($secUQ) use ($uniId) {
+                                 $secUQ->where('universities.id', $uniId);
+                             });
+                    });
+                })
+                ->with(['dimension', 'university', 'universities', 'creator', 'section.category'])
+                ->orderBy('order');
+            }]);
         } elseif ($request->filled('university_id')) {
             if ($request->university_id === 'global') {
                 $query->whereNull('university_id')->whereDoesntHave('universities');
@@ -40,6 +80,15 @@ class SectionController extends Controller
                       });
                 });
             }
+            $query->withCount('questions');
+            $query->with(['questions' => function ($q) {
+                $q->with(['dimension', 'university', 'universities', 'creator', 'section.category'])->orderBy('order');
+            }]);
+        } else {
+            $query->withCount('questions');
+            $query->with(['questions' => function ($q) {
+                $q->with(['dimension', 'university', 'universities', 'creator', 'section.category'])->orderBy('order');
+            }]);
         }
 
         if ($request->filled('category_id')) {
@@ -144,13 +193,26 @@ class SectionController extends Controller
 
         if ($scopeType === 'specific' && !empty($selectedIds)) {
             $section->universities()->sync($selectedIds);
+            
+            // Automatically cascade/sync all questions under this section to match the section's university scope
+            $targetUniId = count($selectedIds) === 1 ? $selectedIds[0] : null;
+            foreach ($section->questions as $q) {
+                $q->update(['university_id' => $targetUniId]);
+                $q->universities()->sync($selectedIds);
+            }
         } else {
             $section->universities()->sync([]);
+            
+            // Make questions under global section global as well
+            foreach ($section->questions as $q) {
+                $q->update(['university_id' => null]);
+                $q->universities()->sync([]);
+            }
         }
 
         AuditLog::log('updated_section', 'SurveySection', $section->id);
 
-        return back()->with('success', 'Section updated successfully!');
+        return back()->with('success', 'Section and its assigned questions updated successfully!');
     }
 
     public function destroy(SurveySection $section)

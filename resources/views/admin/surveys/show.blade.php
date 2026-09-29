@@ -33,15 +33,77 @@
 <div class="row g-4">
     <!-- Survey Settings Left Column -->
     <div class="col-md-4">
-        <div class="card-custom p-4">
-            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="bi bi-gear me-2 text-primary"></i> Survey Settings</h6>
+        <div class="card-custom p-4 mb-4">
+            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-gear me-2 text-primary"></i> Survey Settings</h6>
+                @if(auth()->check() && auth()->user()->isSuperAdmin())
+                    <a href="{{ route('admin.surveys.edit', $survey->id) }}" class="btn btn-outline-primary btn-sm py-0 px-2" title="Edit Duration & Limits">
+                        <i class="bi bi-pencil me-1"></i> Edit
+                    </a>
+                @endif
+            </div>
+
+            <!-- Live Status & Eligibility -->
+            <div class="p-3 rounded-3 mb-3 {{ $survey->isAcceptingResponses() ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-danger-subtle text-danger border border-danger-subtle' }}">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi {{ $survey->isAcceptingResponses() ? 'bi-check-circle-fill fs-5' : 'bi-exclamation-octagon-fill fs-5' }}"></i>
+                    <div>
+                        <div class="fw-bold small">{{ $survey->isAcceptingResponses() ? 'Accepting Responses' : 'Responses Closed' }}</div>
+                        @if(!$survey->isAcceptingResponses())
+                            <div class="small opacity-75">{{ $survey->getClosedReason() }}</div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            <!-- Duration Info -->
             <div class="small mb-3">
+                <div class="text-secondary fw-semibold mb-1"><i class="bi bi-calendar3 me-1 text-primary"></i> Survey Duration:</div>
+                <div class="p-2 bg-light rounded border">
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">From:</span>
+                        <span class="fw-bold text-dark">{{ $survey->start_date ? \Carbon\Carbon::parse($survey->start_date)->format('M d, Y') : 'Unrestricted' }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mt-1">
+                        <span class="text-muted">To:</span>
+                        <span class="fw-bold text-dark">{{ $survey->end_date ? \Carbon\Carbon::parse($survey->end_date)->format('M d, Y') : 'Open Ended' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Respondent Limit Info -->
+            @php
+                $respCount = $survey->respondentSurveys()->count();
+            @endphp
+            <div class="small mb-3">
+                <div class="text-secondary fw-semibold mb-1"><i class="bi bi-people me-1 text-primary"></i> Respondent Limit:</div>
+                <div class="p-2 bg-light rounded border">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-muted">Capacity:</span>
+                        <span class="fw-bold text-dark">
+                            {{ number_format($respCount) }} / {{ $survey->max_respondents ? number_format($survey->max_respondents) : 'Unlimited' }}
+                        </span>
+                    </div>
+                    @if($survey->max_respondents)
+                        @php
+                            $pct = min(100, round(($respCount / $survey->max_respondents) * 100));
+                            $barColor = $pct >= 100 ? 'bg-danger' : ($pct >= 80 ? 'bg-warning' : 'bg-primary');
+                        @endphp
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar {{ $barColor }}" role="progressbar" style="width: {{ $pct }}%"></div>
+                        </div>
+                        <div class="text-end text-muted mt-1" style="font-size:0.7rem;">{{ $pct }}% quota used</div>
+                    @endif
+                </div>
+            </div>
+
+            <div class="small mb-2">
                 <strong>Target:</strong> {{ $survey->target_respondents ?? 'All Respondents' }}
             </div>
-            <div class="small mb-3">
-                <strong>Voice Answers Enabled:</strong> {{ $survey->enable_voice ? 'Yes' : 'No' }}
+            <div class="small mb-2">
+                <strong>Voice Answers:</strong> {{ $survey->enable_voice ? 'Enabled' : 'Disabled' }}
             </div>
-            <div class="small mb-3">
+            <div class="small mb-2">
                 <strong>Allow Anonymous:</strong> {{ $survey->allow_anonymous ? 'Yes' : 'No' }}
             </div>
             <div class="small mb-3">

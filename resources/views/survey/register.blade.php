@@ -15,30 +15,54 @@
             </div>
         </div>
 
+        @if($errors->any())
+            <div class="alert alert-danger alert-dismissible fade show rounded-3 mb-4 shadow-sm" role="alert">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <i class="bi bi-exclamation-triangle-fill fs-5 text-danger"></i>
+                    <strong>Unable to Start Survey:</strong>
+                </div>
+                <ul class="mb-0 ps-3 small">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+
         <form action="{{ route('survey.start') }}" method="POST">
             @csrf
             <input type="hidden" name="category_code" value="{{ $category->code }}">
 
             <div class="row g-3 mb-4">
+                <!-- Step 1: Select Institution / University -->
                 <div class="col-md-12">
-                    <label class="form-label fw-semibold">Select Your University / College / Institute <span class="text-danger">*</span></label>
-                    <select name="university_id" class="form-select border-primary" required>
-                        <option value="">-- Select Your Institution / College --</option>
+                    <label class="form-label fw-semibold">Select Your University / Institute <span class="text-danger">*</span></label>
+                    <select name="institution_id" id="institution_select" class="form-select border-primary @error('institution_id') is-invalid @enderror @error('university_id') is-invalid @enderror" required>
+                        <option value="">-- Search & Select University / Institute --</option>
                         
-                        @php $inis = $institutions->where('type', 'ini'); @endphp
-                        @if($inis->count() > 0)
-                            <optgroup label="Institutes of National Importance (IIT / NIT / IIM / AIIMS)">
-                                @foreach($inis as $inst)
-                                    <option value="{{ $inst->id }}">{{ $inst->name }} ({{ $inst->short_name }})</option>
-                                @endforeach
-                            </optgroup>
-                        @endif
-
                         @php $unis = $institutions->where('type', 'university'); @endphp
                         @if($unis->count() > 0)
                             <optgroup label="Central & State Universities">
                                 @foreach($unis as $inst)
-                                    <option value="{{ $inst->id }}">{{ $inst->name }} ({{ $inst->short_name }})</option>
+                                    <option value="{{ $inst->id }}" 
+                                            data-has-colleges="{{ $inst->colleges->count() > 0 ? '1' : '0' }}"
+                                            {{ old('institution_id', old('university_id')) == $inst->id ? 'selected' : '' }}>
+                                        {{ $inst->name }} ({{ $inst->short_name }})
+                                    </option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+
+                        @php $inis = $institutions->where('type', 'ini'); @endphp
+                        @if($inis->count() > 0)
+                            <optgroup label="Institutes of National Importance (IIT / NIT / IIM / AIIMS)">
+                                @foreach($inis as $inst)
+                                    <option value="{{ $inst->id }}" 
+                                            data-has-colleges="0"
+                                            {{ old('institution_id', old('university_id')) == $inst->id ? 'selected' : '' }}>
+                                        {{ $inst->name }} ({{ $inst->short_name }})
+                                    </option>
                                 @endforeach
                             </optgroup>
                         @endif
@@ -47,16 +71,11 @@
                         @if($autonomies->count() > 0)
                             <optgroup label="Autonomous Colleges">
                                 @foreach($autonomies as $inst)
-                                    <option value="{{ $inst->id }}">{{ $inst->name }} (Autonomous)</option>
-                                @endforeach
-                            </optgroup>
-                        @endif
-
-                        @php $affiliateds = $institutions->where('type', 'affiliated_college'); @endphp
-                        @if($affiliateds->count() > 0)
-                            <optgroup label="Affiliated Colleges (Under Parent University)">
-                                @foreach($affiliateds as $inst)
-                                    <option value="{{ $inst->id }}">{{ $inst->name }} {{ $inst->parent ? '(Affiliated to '.$inst->parent->short_name.')' : '' }}</option>
+                                    <option value="{{ $inst->id }}" 
+                                            data-has-colleges="0"
+                                            {{ old('institution_id', old('university_id')) == $inst->id ? 'selected' : '' }}>
+                                        {{ $inst->name }} (Autonomous)
+                                    </option>
                                 @endforeach
                             </optgroup>
                         @endif
@@ -65,63 +84,99 @@
                         @if($polytechnics->count() > 0)
                             <optgroup label="Polytechnics & ITIs (Skill & Technical Institutes)">
                                 @foreach($polytechnics as $inst)
-                                    <option value="{{ $inst->id }}">{{ $inst->name }} (Polytechnic / ITI)</option>
+                                    <option value="{{ $inst->id }}" 
+                                            data-has-colleges="0"
+                                            {{ old('institution_id', old('university_id')) == $inst->id ? 'selected' : '' }}>
+                                        {{ $inst->name }} (Polytechnic / ITI)
+                                    </option>
                                 @endforeach
                             </optgroup>
                         @endif
                     </select>
+                    @error('institution_id')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                    @error('university_id')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                <!-- Step 2: Conditional College / Campus Dropdown -->
+                <div class="col-md-12" id="college_container" style="display: none;">
+                    <label class="form-label fw-semibold">Select College / Campus <span class="text-danger">*</span></label>
+                    <select name="college_id" id="college_select" class="form-select border-primary @error('college_id') is-invalid @enderror">
+                        <option value="main_campus">University Main Campus / University Departments</option>
+                    </select>
+                    <small class="text-muted d-block mt-1">
+                        Select your specific affiliated college, or choose <strong>"University Main Campus"</strong> if you study directly in university departments.
+                    </small>
+                    @error('college_id')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
-                    <input type="text" name="name" class="form-control" placeholder="Enter your full name" required>
+                    <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" placeholder="Enter your full name" value="{{ old('name') }}" required>
+                    @error('name')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold">Email Address (Optional)</label>
-                    <input type="email" name="email" class="form-control" placeholder="name@example.com">
+                    <label class="form-label fw-semibold">Email Address <span class="text-danger">*</span></label>
+                    <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" placeholder="name@example.com" value="{{ old('email') }}" required>
+                    @error('email')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Mobile Number (Optional)</label>
-                    <input type="tel" name="mobile" class="form-control" placeholder="+91 9876543210">
+                    <input type="tel" name="mobile" class="form-control @error('mobile') is-invalid @enderror" placeholder="+91 9876543210" value="{{ old('mobile') }}">
+                    @error('mobile')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Gender (Optional)</label>
-                    <select name="gender" class="form-select">
+                    <select name="gender" class="form-select @error('gender') is-invalid @enderror">
                         <option value="">Select Gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other / Prefer not to say</option>
+                        <option value="Male" {{ old('gender') == 'Male' ? 'selected' : '' }}>Male</option>
+                        <option value="Female" {{ old('gender') == 'Female' ? 'selected' : '' }}>Female</option>
+                        <option value="Other" {{ old('gender') == 'Other' ? 'selected' : '' }}>Other / Prefer not to say</option>
                     </select>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Academic Programme <span class="text-danger">*</span></label>
-                    <select name="programme" id="programme_select" class="form-select border-primary" required>
+                    <select name="programme" id="programme_select" class="form-select border-primary @error('programme') is-invalid @enderror" required>
                         <option value="">-- Select Institution First --</option>
                     </select>
                     <div id="other_programme_container" class="mt-2" style="display:none;">
-                        <input type="text" name="other_programme" id="other_programme_input" class="form-control border-primary" placeholder="Specify your Academic Programme">
+                        <input type="text" name="other_programme" id="other_programme_input" class="form-control border-primary" placeholder="Specify your Academic Programme" value="{{ old('other_programme') }}">
                     </div>
+                    @error('programme')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Department / Discipline</label>
-                    <select name="department" id="department_select" class="form-select border-primary">
+                    <select name="department" id="department_select" class="form-select border-primary @error('department') is-invalid @enderror">
                         <option value="">-- Select Programme First --</option>
                     </select>
                     <div id="other_department_container" class="mt-2" style="display:none;">
-                        <input type="text" name="other_department" id="other_department_input" class="form-control border-primary" placeholder="Specify your Department / Discipline">
+                        <input type="text" name="other_department" id="other_department_input" class="form-control border-primary" placeholder="Specify your Department / Discipline" value="{{ old('other_department') }}">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Graduation / Admission Year</label>
-                    <input type="text" name="graduation_year" class="form-control" placeholder="e.g. 2024">
+                    <input type="text" name="graduation_year" class="form-control @error('graduation_year') is-invalid @enderror" placeholder="e.g. 2024" value="{{ old('graduation_year') }}">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Current Employment Status</label>
-                    <select name="employment_status" class="form-select">
-                        <option value="Employed Full-time">Employed Full-time</option>
-                        <option value="Employed Part-time / Freelance">Employed Part-time / Freelance</option>
-                        <option value="Actively Seeking Employment">Actively Seeking Employment</option>
-                        <option value="Currently Studying">Currently Studying</option>
-                        <option value="Discontinued Studies">Discontinued Studies</option>
+                    <select name="employment_status" class="form-select @error('employment_status') is-invalid @enderror">
+                        <option value="Employed Full-time" {{ old('employment_status') == 'Employed Full-time' ? 'selected' : '' }}>Employed Full-time</option>
+                        <option value="Employed Part-time / Freelance" {{ old('employment_status') == 'Employed Part-time / Freelance' ? 'selected' : '' }}>Employed Part-time / Freelance</option>
+                        <option value="Actively Seeking Employment" {{ old('employment_status') == 'Actively Seeking Employment' ? 'selected' : '' }}>Actively Seeking Employment</option>
+                        <option value="Currently Studying" {{ old('employment_status') == 'Currently Studying' ? 'selected' : '' }}>Currently Studying</option>
+                        <option value="Discontinued Studies" {{ old('employment_status') == 'Discontinued Studies' ? 'selected' : '' }}>Discontinued Studies</option>
                     </select>
                 </div>
             </div>
@@ -149,10 +204,97 @@
 </div>
 @endsection
 
+@push('styles')
+<!-- TomSelect CSS -->
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<style>
+    /* Styling TomSelect dropdowns with visible border */
+    .form-select.ts-wrapper,
+    .ts-wrapper.form-select {
+        border: 1.5px solid #3b82f6 !important;
+        border-radius: 0.5rem !important;
+        background-color: #ffffff !important;
+        box-shadow: none !important;
+        min-height: 44px !important;
+        padding: 0 2.25rem 0 0.5rem !important;
+        display: flex !important;
+        align-items: center !important;
+        position: relative !important;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out !important;
+    }
+    .form-select.ts-wrapper.focus,
+    .form-select.ts-wrapper.input-active,
+    .ts-wrapper.focus {
+        border-color: #1d4ed8 !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
+    }
+    .ts-wrapper .ts-control,
+    .form-select.ts-wrapper .ts-control {
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        padding: 0.5rem 0.25rem !important;
+        font-size: 0.95rem !important;
+        width: 100% !important;
+        min-height: 40px !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+    .ts-control input {
+        font-size: 0.95rem !important;
+    }
+    .ts-control .item {
+        color: #1e293b !important;
+        font-weight: 500 !important;
+    }
+    .ts-dropdown {
+        border-radius: 0.5rem !important;
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.08) !important;
+        margin-top: 4px !important;
+        overflow: hidden !important;
+        z-index: 1050 !important;
+    }
+    .ts-dropdown .optgroup-header {
+        font-size: 0.75rem !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+        color: #475569 !important;
+        padding: 8px 14px !important;
+        background-color: #f8fafc !important;
+        border-bottom: 1px solid #f1f5f9 !important;
+    }
+    .ts-dropdown .option {
+        padding: 9px 14px !important;
+        font-size: 0.935rem !important;
+        color: #1e293b !important;
+        border-bottom: 1px solid #f8fafc !important;
+    }
+    .ts-dropdown .option.active {
+        background-color: #eff6ff !important;
+        color: #1d4ed8 !important;
+        font-weight: 600 !important;
+    }
+    .ts-dropdown .highlight {
+        background-color: #fef08a !important;
+        color: #0f172a !important;
+        font-weight: 700 !important;
+        padding: 0 2px !important;
+        border-radius: 2px !important;
+    }
+</style>
+@endpush
+
 @push('scripts')
+<!-- TomSelect JS -->
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    const uniSelect = document.querySelector('select[name="university_id"]');
+    const institutionSelect = document.getElementById('institution_select');
+    const collegeContainer = document.getElementById('college_container');
+    const collegeSelect = document.getElementById('college_select');
+
     const progSelect = document.getElementById('programme_select');
     const otherProgContainer = document.getElementById('other_programme_container');
     const otherProgInput = document.getElementById('other_programme_input');
@@ -160,6 +302,46 @@ document.addEventListener("DOMContentLoaded", function() {
     const deptSelect = document.getElementById('department_select');
     const otherDeptContainer = document.getElementById('other_department_container');
     const otherDeptInput = document.getElementById('other_department_input');
+
+    const savedOldCollege = "{{ old('college_id') }}";
+    const savedOldProg = "{{ old('programme') }}";
+    const savedOldDept = "{{ old('department') }}";
+
+    // Initialize TomSelect on University and College dropdowns
+    let instTomSelect = null;
+    let collegeTomSelect = null;
+
+    if (institutionSelect) {
+        instTomSelect = new TomSelect('#institution_select', {
+            create: false,
+            maxItems: 1,
+            placeholder: '-- Search & Select University / Institute --',
+            allowEmptyOption: true,
+            highlight: true,
+            sortField: { field: '$order' },
+            searchField: ['text']
+        });
+    }
+
+    if (collegeSelect) {
+        collegeTomSelect = new TomSelect('#college_select', {
+            create: false,
+            maxItems: 1,
+            placeholder: '-- Search & Select College / Campus --',
+            allowEmptyOption: true,
+            highlight: true,
+            sortField: { field: '$order' },
+            searchField: ['text']
+        });
+    }
+
+    function getActiveInstitutionId() {
+        const colVal = collegeTomSelect ? collegeTomSelect.getValue() : (collegeSelect ? collegeSelect.value : '');
+        if (collegeContainer.style.display !== 'none' && colVal && colVal !== 'main_campus') {
+            return colVal;
+        }
+        return instTomSelect ? instTomSelect.getValue() : (institutionSelect ? institutionSelect.value : '');
+    }
 
     function checkOtherProgramme() {
         if (progSelect && progSelect.value === 'Other') {
@@ -186,7 +368,7 @@ document.addEventListener("DOMContentLoaded", function() {
     if (progSelect) {
         progSelect.addEventListener('change', function() {
             checkOtherProgramme();
-            updateDepartments(uniSelect ? uniSelect.value : '', this.value);
+            updateDepartments(getActiveInstitutionId(), this.value);
         });
     }
 
@@ -194,9 +376,9 @@ document.addEventListener("DOMContentLoaded", function() {
         deptSelect.addEventListener('change', checkOtherDepartment);
     }
 
-    function updateDepartments(uniId, progVal) {
+    function updateDepartments(instId, progVal, preselectDept = '') {
         if (!deptSelect) return;
-        if (!uniId || !progVal) {
+        if (!instId || !progVal) {
             deptSelect.innerHTML = '<option value="">-- Select Programme First --</option>';
             checkOtherDepartment();
             return;
@@ -204,7 +386,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         deptSelect.innerHTML = '<option value="">Loading departments...</option>';
 
-        fetch('/api/universities/' + uniId + '/departments?programme=' + encodeURIComponent(progVal))
+        fetch('/api/universities/' + instId + '/departments?programme=' + encodeURIComponent(progVal))
             .then(response => response.json())
             .then(data => {
                 deptSelect.innerHTML = '<option value="">-- Select Department / Discipline --</option>';
@@ -214,12 +396,18 @@ document.addEventListener("DOMContentLoaded", function() {
                         const opt = document.createElement('option');
                         opt.value = dept;
                         opt.textContent = dept;
+                        if (preselectDept && preselectDept === dept) {
+                            opt.selected = true;
+                        }
                         deptSelect.appendChild(opt);
                     });
                 }
                 const otherOpt = document.createElement('option');
                 otherOpt.value = 'Other';
                 otherOpt.textContent = 'Other (Please specify)';
+                if (preselectDept && preselectDept === 'Other') {
+                    otherOpt.selected = true;
+                }
                 deptSelect.appendChild(otherOpt);
 
                 checkOtherDepartment();
@@ -232,54 +420,176 @@ document.addEventListener("DOMContentLoaded", function() {
             });
     }
 
-    if (uniSelect && progSelect) {
-        function updateProgrammes(uniId) {
-            if (!uniId) {
-                progSelect.innerHTML = '<option value="">-- Select Institution First --</option>';
-                checkOtherProgramme();
-                updateDepartments('', '');
-                return;
-            }
-            
-            progSelect.innerHTML = '<option value="">Loading offered programmes...</option>';
-            
-            fetch('/api/universities/' + uniId + '/programmes')
-                .then(response => response.json())
-                .then(data => {
-                    progSelect.innerHTML = '<option value="">-- Select Academic Programme --</option>';
-                    if (data.programmes && data.programmes.length > 0) {
-                        data.programmes.forEach(prog => {
-                            if (prog === 'Other') return;
-                            const opt = document.createElement('option');
-                            opt.value = prog;
-                            opt.textContent = prog;
-                            progSelect.appendChild(opt);
-                        });
-                    }
-                    const otherOpt = document.createElement('option');
-                    otherOpt.value = 'Other';
-                    otherOpt.textContent = 'Other (Please specify)';
-                    progSelect.appendChild(otherOpt);
+    function updateProgrammes(instId, preselectProg = '', preselectDept = '') {
+        if (!progSelect) return;
+        if (!instId) {
+            progSelect.innerHTML = '<option value="">-- Select Institution First --</option>';
+            checkOtherProgramme();
+            updateDepartments('', '');
+            return;
+        }
+        
+        progSelect.innerHTML = '<option value="">Loading offered programmes...</option>';
+        
+        fetch('/api/universities/' + instId + '/programmes')
+            .then(response => response.json())
+            .then(data => {
+                progSelect.innerHTML = '<option value="">-- Select Academic Programme --</option>';
+                if (data.programmes && data.programmes.length > 0) {
+                    data.programmes.forEach(prog => {
+                        if (prog === 'Other') return;
+                        const opt = document.createElement('option');
+                        opt.value = prog;
+                        opt.textContent = prog;
+                        if (preselectProg && preselectProg === prog) {
+                            opt.selected = true;
+                        }
+                        progSelect.appendChild(opt);
+                    });
+                }
+                const otherOpt = document.createElement('option');
+                otherOpt.value = 'Other';
+                otherOpt.textContent = 'Other (Please specify)';
+                if (preselectProg && preselectProg === 'Other') {
+                    otherOpt.selected = true;
+                }
+                progSelect.appendChild(otherOpt);
 
-                    checkOtherProgramme();
-                    updateDepartments(uniId, progSelect.value);
+                checkOtherProgramme();
+                updateDepartments(instId, progSelect.value, preselectDept);
+            })
+            .catch(err => {
+                console.error('Error fetching programmes:', err);
+                progSelect.innerHTML = '<option value="">-- Select Academic Programme --</option>' +
+                    '<option value="Other">Other (Please specify)</option>';
+                checkOtherProgramme();
+                updateDepartments(instId, progSelect.value, preselectDept);
+            });
+    }
+
+    function handleInstitutionChange(isInit = false) {
+        const instId = instTomSelect ? instTomSelect.getValue() : (institutionSelect ? institutionSelect.value : '');
+        if (!instId) {
+            collegeContainer.style.display = 'none';
+            if (collegeSelect) collegeSelect.removeAttribute('required');
+            updateProgrammes('');
+            return;
+        }
+
+        const opt = institutionSelect ? institutionSelect.querySelector(`option[value="${instId}"]`) : null;
+        const hasColleges = opt ? opt.getAttribute('data-has-colleges') === '1' : false;
+
+        if (hasColleges) {
+            collegeContainer.style.display = 'block';
+
+            if (collegeTomSelect) {
+                collegeTomSelect.clear();
+                collegeTomSelect.clearOptions();
+                collegeTomSelect.clearOptionGroups();
+                collegeTomSelect.addOption({
+                    value: 'main_campus',
+                    text: 'University Main Campus / University Departments'
+                });
+                collegeTomSelect.setValue('main_campus');
+            } else if (collegeSelect) {
+                collegeSelect.innerHTML = '<option value="">Loading affiliated colleges...</option>';
+            }
+
+            fetch('/api/universities/' + instId + '/colleges')
+                .then(res => res.json())
+                .then(data => {
+                    if (collegeTomSelect) {
+                        collegeTomSelect.clearOptions();
+                        collegeTomSelect.clearOptionGroups();
+                        collegeTomSelect.addOption({
+                            value: 'main_campus',
+                            text: 'University Main Campus / University Departments'
+                        });
+
+                        if (data.colleges && data.colleges.length > 0) {
+                            collegeTomSelect.addOptionGroup('affiliated', { label: 'Affiliated Colleges' });
+                            data.colleges.forEach(col => {
+                                collegeTomSelect.addOption({
+                                    value: String(col.id),
+                                    text: col.name,
+                                    optgroup: 'affiliated'
+                                });
+                            });
+                        }
+                        collegeTomSelect.refreshOptions(false);
+
+                        if (isInit && savedOldCollege) {
+                            collegeTomSelect.setValue(String(savedOldCollege));
+                        } else {
+                            collegeTomSelect.setValue('main_campus');
+                        }
+                    } else if (collegeSelect) {
+                        collegeSelect.innerHTML = '<option value="main_campus">University Main Campus / University Departments</option>';
+                        if (data.colleges && data.colleges.length > 0) {
+                            const optgroup = document.createElement('optgroup');
+                            optgroup.label = "Affiliated Colleges";
+                            data.colleges.forEach(col => {
+                                const optEl = document.createElement('option');
+                                optEl.value = col.id;
+                                optEl.textContent = col.name;
+                                if (isInit && savedOldCollege && (savedOldCollege == col.id || savedOldCollege === col.name)) {
+                                    optEl.selected = true;
+                                }
+                                optgroup.appendChild(optEl);
+                            });
+                            collegeSelect.appendChild(optgroup);
+                        }
+                    }
+
+                    const activeId = getActiveInstitutionId();
+                    updateProgrammes(activeId, isInit ? savedOldProg : '', isInit ? savedOldDept : '');
                 })
                 .catch(err => {
-                    console.error('Error fetching programmes:', err);
-                    progSelect.innerHTML = '<option value="">-- Select Academic Programme --</option>' +
-                        '<option value="Other">Other (Please specify)</option>';
-                    checkOtherProgramme();
-                    updateDepartments(uniId, progSelect.value);
+                    console.error('Error loading colleges:', err);
+                    if (collegeTomSelect) {
+                        collegeTomSelect.setValue('main_campus');
+                    } else if (collegeSelect) {
+                        collegeSelect.innerHTML = '<option value="main_campus">University Main Campus / University Departments</option>';
+                    }
+                    updateProgrammes(instId, isInit ? savedOldProg : '', isInit ? savedOldDept : '');
                 });
+        } else {
+            collegeContainer.style.display = 'none';
+            if (collegeTomSelect) {
+                collegeTomSelect.setValue('main_campus');
+            } else if (collegeSelect) {
+                collegeSelect.value = 'main_campus';
+            }
+            updateProgrammes(instId, isInit ? savedOldProg : '', isInit ? savedOldDept : '');
         }
+    }
 
-        uniSelect.addEventListener('change', function() {
-            updateProgrammes(this.value);
+    if (instTomSelect) {
+        instTomSelect.on('change', function() {
+            handleInstitutionChange(false);
         });
+    } else if (institutionSelect) {
+        institutionSelect.addEventListener('change', function() {
+            handleInstitutionChange(false);
+        });
+    }
 
-        if (uniSelect.value) {
-            updateProgrammes(uniSelect.value);
-        }
+    if (collegeTomSelect) {
+        collegeTomSelect.on('change', function() {
+            const activeId = getActiveInstitutionId();
+            updateProgrammes(activeId);
+        });
+    } else if (collegeSelect) {
+        collegeSelect.addEventListener('change', function() {
+            const activeId = getActiveInstitutionId();
+            updateProgrammes(activeId);
+        });
+    }
+
+    // Initialize on page load
+    const initialInstVal = instTomSelect ? instTomSelect.getValue() : (institutionSelect ? institutionSelect.value : '');
+    if (initialInstVal) {
+        handleInstitutionChange(true);
     }
 });
 </script>

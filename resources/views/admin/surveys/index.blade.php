@@ -23,6 +23,8 @@
                 <tr>
                     <th>Survey Title</th>
                     <th>Status</th>
+                    <th>Duration (From - To)</th>
+                    <th>Respondent Limit</th>
                     <th>Categories</th>
                     <th>Version</th>
                     <th class="text-end">Actions</th>
@@ -37,15 +39,20 @@
                         $userUniId = auth()->user()?->university_id;
                         
                         $canModify = $isSuperAdmin || ($s->university_id && $s->university_id == $userUniId) || ($assignedUnis->contains('id', $userUniId));
+                        $respCount = $s->respondent_surveys_count ?? $s->respondentSurveys()->count();
                     @endphp
                     <tr>
                         <td>
                             <div class="fw-bold text-dark">
                                 @if($isGlobalSurvey)
                                     <span class="badge bg-info-subtle text-primary border me-1" style="font-size:0.7rem;" title="Available to all Universities & Colleges"><i class="bi bi-globe me-1"></i> Global (All)</span>
-                                @elseif($assignedUnis->isNotEmpty())
+                                @elseif($isSuperAdmin && $assignedUnis->isNotEmpty())
                                     <span class="badge bg-success-subtle text-success border me-1" style="font-size:0.7rem;" title="{{ $assignedUnis->pluck('name')->join(', ') }}">
                                         <i class="bi bi-building me-1"></i> {{ $assignedUnis->count() }} Institutions ({{ $assignedUnis->pluck('short_name')->take(2)->join(', ') }}{{ $assignedUnis->count() > 2 ? '...' : '' }})
+                                    </span>
+                                @elseif(auth()->user()?->university)
+                                    <span class="badge bg-primary-subtle text-primary border me-1" style="font-size:0.7rem;">
+                                        <i class="bi bi-building me-1"></i> {{ auth()->user()->university->short_name }}
                                     </span>
                                 @elseif($s->university)
                                     <span class="badge bg-primary-subtle text-primary border me-1" style="font-size:0.7rem;">
@@ -57,7 +64,49 @@
                             <small class="text-muted">{{ Str::limit($s->description, 60) }}</small>
                         </td>
                         <td>
-                            <span class="badge bg-success">{{ strtoupper($s->status) }}</span>
+                            @if(!$s->isAcceptingResponses())
+                                <span class="badge bg-danger-subtle text-danger border"><i class="bi bi-x-circle me-1"></i>{{ $s->getClosedReason() }}</span>
+                            @else
+                                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>{{ strtoupper($s->status) }}</span>
+                            @endif
+                        </td>
+                        <td>
+                            @if($s->start_date || $s->end_date)
+                                <div class="small fw-semibold text-dark">
+                                    <i class="bi bi-calendar3 text-primary me-1"></i>
+                                    {{ $s->start_date ? \Carbon\Carbon::parse($s->start_date)->format('M d, Y') : 'Start' }} 
+                                    <span class="text-muted">&rarr;</span> 
+                                    {{ $s->end_date ? \Carbon\Carbon::parse($s->end_date)->format('M d, Y') : 'Open' }}
+                                </div>
+                                @if($s->isExpired())
+                                    <span class="badge bg-danger-subtle text-danger border" style="font-size:0.65rem;">Expired</span>
+                                @elseif(!$s->hasStarted())
+                                    <span class="badge bg-warning-subtle text-warning border" style="font-size:0.65rem;">Starts {{ \Carbon\Carbon::parse($s->start_date)->diffForHumans() }}</span>
+                                @elseif($s->end_date)
+                                    <span class="badge bg-info-subtle text-info border" style="font-size:0.65rem;">Ends {{ \Carbon\Carbon::parse($s->end_date)->diffForHumans() }}</span>
+                                @endif
+                            @else
+                                <span class="badge bg-light text-secondary border small"><i class="bi bi-infinity me-1"></i>Always Active</span>
+                            @endif
+                        </td>
+                        <td>
+                            <div class="small fw-semibold text-dark">
+                                <i class="bi bi-people text-primary me-1"></i>{{ number_format($respCount) }} 
+                                @if($s->max_respondents)
+                                    <span class="text-muted">/ {{ number_format($s->max_respondents) }}</span>
+                                @else
+                                    <span class="text-muted">/ &infin;</span>
+                                @endif
+                            </div>
+                            @if($s->max_respondents)
+                                @php
+                                    $pct = min(100, round(($respCount / $s->max_respondents) * 100));
+                                    $barColor = $pct >= 100 ? 'bg-danger' : ($pct >= 80 ? 'bg-warning' : 'bg-primary');
+                                @endphp
+                                <div class="progress mt-1" style="height: 4px; width: 90px;" title="{{ $pct }}% of quota filled">
+                                    <div class="progress-bar {{ $barColor }}" role="progressbar" style="width: {{ $pct }}%"></div>
+                                </div>
+                            @endif
                         </td>
                         <td>
                             <span class="badge bg-light text-primary border">{{ $s->categories->count() }} Categories</span>

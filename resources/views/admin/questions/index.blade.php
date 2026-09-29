@@ -20,24 +20,54 @@
 
 <!-- Filter Bar -->
 <div class="card-custom p-3 mb-4">
-    <form method="GET" action="{{ route('admin.questions.index') }}" class="row g-2">
+    <form method="GET" action="{{ route('admin.questions.index') }}" class="row g-2 align-items-center">
         <div class="col-md-3">
-            <input type="text" name="search" class="form-control form-control-sm" placeholder="Search question text..." value="{{ request('search') }}">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light text-muted"><i class="bi bi-search"></i></span>
+                <input type="text" name="search" class="form-control" placeholder="Search question text..." value="{{ request('search') }}">
+            </div>
         </div>
+
+        <div class="col-md-3">
+            <select name="section_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">Filter by Section (All)</option>
+                @foreach($sections as $sec)
+                    <option value="{{ $sec->id }}" {{ request('section_id') == $sec->id ? 'selected' : '' }}>
+                        {{ $sec->title }} ({{ $sec->category->name ?? 'General' }})
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
         @if(auth()->check() && auth()->user()->isSuperAdmin())
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <select name="university_id" class="form-select form-select-sm" onchange="this.form.submit()">
-                    <option value="">Filter by Institution (All)</option>
-                    <option value="global" {{ request('university_id') == 'global' ? 'selected' : '' }}>Global (All Institutions)</option>
+                    <option value="">Institution (All)</option>
+                    <option value="global" {{ request('university_id') == 'global' ? 'selected' : '' }}>Global (Common)</option>
                     @foreach($universities as $u)
-                        <option value="{{ $u->id }}" {{ request('university_id') == $u->id ? 'selected' : '' }}>{{ $u->name }} ({{ $u->short_name }})</option>
+                        <option value="{{ $u->id }}" {{ request('university_id') == $u->id ? 'selected' : '' }}>{{ $u->short_name }}</option>
                     @endforeach
                 </select>
             </div>
         @endif
+
         <div class="col-md-2">
-            <select name="tag" class="form-select form-select-sm">
-                <option value="">Filter by Tag (All)</option>
+            <select name="type" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">Type (All)</option>
+                <option value="single_choice" {{ request('type') == 'single_choice' ? 'selected' : '' }}>Single Choice</option>
+                <option value="multiple_choice" {{ request('type') == 'multiple_choice' ? 'selected' : '' }}>Multiple Choice</option>
+                <option value="likert" {{ request('type') == 'likert' ? 'selected' : '' }}>Likert Scale</option>
+                <option value="rating" {{ request('type') == 'rating' ? 'selected' : '' }}>Rating</option>
+                <option value="dropdown" {{ request('type') == 'dropdown' ? 'selected' : '' }}>Dropdown</option>
+                <option value="short_text" {{ request('type') == 'short_text' ? 'selected' : '' }}>Short Text</option>
+                <option value="long_text" {{ request('type') == 'long_text' ? 'selected' : '' }}>Long Text</option>
+                <option value="voice" {{ request('type') == 'voice' ? 'selected' : '' }}>Voice Answer</option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <select name="tag" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">Tag (All)</option>
                 <option value="technical" {{ request('tag') == 'technical' ? 'selected' : '' }}>Technical</option>
                 <option value="practical" {{ request('tag') == 'practical' ? 'selected' : '' }}>Practical</option>
                 <option value="ai" {{ request('tag') == 'ai' ? 'selected' : '' }}>AI & Digital</option>
@@ -46,17 +76,12 @@
                 <option value="voice" {{ request('tag') == 'voice' ? 'selected' : '' }}>Voice Feedback</option>
             </select>
         </div>
-        <div class="col-md-2">
-            <select name="type" class="form-select form-select-sm">
-                <option value="">Filter by Type (All)</option>
-                <option value="single_choice" {{ request('type') == 'single_choice' ? 'selected' : '' }}>Single Choice</option>
-                <option value="likert" {{ request('type') == 'likert' ? 'selected' : '' }}>Likert Scale</option>
-                <option value="rating" {{ request('type') == 'rating' ? 'selected' : '' }}>Rating</option>
-                <option value="voice" {{ request('type') == 'voice' ? 'selected' : '' }}>Voice Answer</option>
-            </select>
-        </div>
-        <div class="col-md-2">
-            <button type="submit" class="btn btn-sm btn-secondary w-100"><i class="bi bi-filter me-1"></i> Filter</button>
+
+        <div class="col-auto ms-auto d-flex gap-2">
+            <button type="submit" class="btn btn-sm btn-secondary"><i class="bi bi-filter me-1"></i> Filter</button>
+            @if(request()->hasAny(['search', 'section_id', 'category_id', 'university_id', 'type', 'tag']))
+                <a href="{{ route('admin.questions.index') }}" class="btn btn-sm btn-light border">Reset</a>
+            @endif
         </div>
     </form>
 </div>
@@ -79,7 +104,7 @@
             <tbody>
                 @foreach($questions as $q)
                     <tr>
-                        <td>{{ $loop->iteration }}</td>
+                        <td class="text-muted fw-semibold">{{ ($questions->firstItem() ?? 1) + $loop->index }}</td>
                         <td>
                             <div class="fw-semibold text-dark">
                                 {{ $q->question_text }}
@@ -96,18 +121,36 @@
                             @endif
                         </td>
                         <td>
-                            @if($q->university_id && $q->university)
-                                <span class="badge bg-primary-subtle text-primary border" title="Specific to {{ $q->university->name }}">
-                                    <i class="bi bi-building me-1"></i> {{ $q->university->short_name }}
-                                </span>
-                            @elseif(isset($q->universities) && $q->universities->isNotEmpty())
-                                <span class="badge bg-info-subtle text-info border" title="{{ $q->universities->pluck('name')->implode(', ') }}">
-                                    <i class="bi bi-building me-1"></i> {{ $q->universities->count() }} Institutions
-                                </span>
+                            @php
+                                $isSuperAdmin = auth()->check() && auth()->user()->isSuperAdmin();
+                                $userUni = auth()->user()?->university;
+                                $isGlobal = is_null($q->university_id) && (!isset($q->universities) || $q->universities->isEmpty());
+                            @endphp
+
+                            @if($isSuperAdmin)
+                                @if($q->university_id && $q->university)
+                                    <span class="badge bg-primary-subtle text-primary border" title="Specific to {{ $q->university->name }}">
+                                        <i class="bi bi-building me-1"></i> {{ $q->university->short_name }}
+                                    </span>
+                                @elseif(isset($q->universities) && $q->universities->isNotEmpty())
+                                    <span class="badge bg-info-subtle text-info border" title="{{ $q->universities->pluck('name')->implode(', ') }}">
+                                        <i class="bi bi-building me-1"></i> {{ $q->universities->count() }} Institutions
+                                    </span>
+                                @else
+                                    <span class="badge bg-secondary-subtle text-secondary border">
+                                        <i class="bi bi-globe me-1"></i> Common (All)
+                                    </span>
+                                @endif
                             @else
-                                <span class="badge bg-secondary-subtle text-secondary border">
-                                    <i class="bi bi-globe me-1"></i> Common (All)
-                                </span>
+                                @if($isGlobal)
+                                    <span class="badge bg-secondary-subtle text-secondary border">
+                                        <i class="bi bi-globe me-1"></i> Common (All)
+                                    </span>
+                                @else
+                                    <span class="badge bg-primary-subtle text-primary border" title="{{ $userUni->name ?? 'Your Institution' }}">
+                                        <i class="bi bi-building me-1"></i> {{ $userUni->short_name ?? 'Your Institution' }}
+                                    </span>
+                                @endif
                             @endif
                         </td>
                         <td><span class="badge bg-info-subtle text-info border">{{ strtoupper($q->type) }}</span></td>

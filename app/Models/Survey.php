@@ -18,6 +18,7 @@ class Survey extends Model
         'status',
         'start_date',
         'end_date',
+        'max_respondents',
         'language',
         'target_respondents',
         'estimated_completion_time',
@@ -37,7 +38,48 @@ class Survey extends Model
         'settings' => 'array',
         'start_date' => 'date',
         'end_date' => 'date',
+        'max_respondents' => 'integer',
     ];
+
+    public function hasStarted(): bool
+    {
+        return empty($this->start_date) || now()->startOfDay()->gte($this->start_date->startOfDay());
+    }
+
+    public function isExpired(): bool
+    {
+        return !empty($this->end_date) && now()->startOfDay()->gt($this->end_date->endOfDay());
+    }
+
+    public function isQuotaFull(): bool
+    {
+        if (empty($this->max_respondents)) {
+            return false;
+        }
+        return $this->respondentSurveys()->count() >= $this->max_respondents;
+    }
+
+    public function isAcceptingResponses(): bool
+    {
+        return $this->status === 'published' && $this->hasStarted() && !$this->isExpired() && !$this->isQuotaFull();
+    }
+
+    public function getClosedReason(): ?string
+    {
+        if ($this->status !== 'published') {
+            return "This survey is currently " . strtolower($this->status) . " and not accepting responses.";
+        }
+        if (!$this->hasStarted()) {
+            return "This survey campaign has not started yet. It will open on " . $this->start_date->format('d M Y') . ".";
+        }
+        if ($this->isExpired()) {
+            return "This survey campaign expired on " . $this->end_date->format('d M Y') . " and is now closed.";
+        }
+        if ($this->isQuotaFull()) {
+            return "This survey has reached its maximum respondent limit (" . number_format($this->max_respondents) . " respondents) and is no longer accepting new submissions.";
+        }
+        return null;
+    }
 
     public function university()
     {

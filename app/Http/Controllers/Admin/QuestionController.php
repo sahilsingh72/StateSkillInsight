@@ -30,6 +30,12 @@ class QuestionController extends Controller
                 ->orWhere('university_id', $uniId)
                 ->orWhereHas('universities', function ($uq) use ($uniId) {
                     $uq->where('universities.id', $uniId);
+                })
+                ->orWhereHas('section', function ($secQ) use ($uniId) {
+                    $secQ->where('university_id', $uniId)
+                         ->orWhereHas('universities', function ($secUQ) use ($uniId) {
+                             $secUQ->where('universities.id', $uniId);
+                         });
                 });
             });
         } elseif ($request->filled('university_id')) {
@@ -46,6 +52,14 @@ class QuestionController extends Controller
             }
         }
 
+        if ($request->filled('section_id')) {
+            $query->where('section_id', $request->section_id);
+        }
+        if ($request->filled('category_id')) {
+            $query->whereHas('section', function ($sq) use ($request) {
+                $sq->where('category_id', $request->category_id);
+            });
+        }
         if ($request->has('tag') && $request->tag) {
             $query->whereJsonContains('tags', $request->tag);
         }
@@ -57,10 +71,25 @@ class QuestionController extends Controller
         }
 
         $questions = $query->paginate(20)->withQueryString();
+
+        $secQuery = SurveySection::with('category')->orderBy('title');
+        if ($user && !$user->isSuperAdmin()) {
+            $secQuery->where(function ($q) use ($user) {
+                $q->where(function ($gq) {
+                    $gq->whereNull('university_id')
+                       ->whereDoesntHave('universities');
+                })
+                ->orWhere('university_id', $user->university_id)
+                ->orWhereHas('universities', function ($uq) use ($user) {
+                    $uq->where('universities.id', $user->university_id);
+                });
+            });
+        }
+        $sections = $secQuery->get();
         $categories = SurveyCategory::all();
         $universities = University::all();
 
-        return view('admin.questions.index', compact('questions', 'categories', 'universities'));
+        return view('admin.questions.index', compact('questions', 'categories', 'universities', 'sections'));
     }
 
     public function create(Request $request)
@@ -289,6 +318,11 @@ class QuestionController extends Controller
 
         AuditLog::log('updated_question', 'Question', $question->id);
 
+        if ($request->input('return_to') === 'section_modal' || $request->filled('section_id_return')) {
+            $secId = $request->input('section_id_return') ?? $question->section_id;
+            return redirect()->route('admin.sections.index', ['open_section_modal' => $secId])->with('success', 'Question updated successfully!');
+        }
+
         return redirect()->route('admin.questions.index')->with('success', 'Question updated successfully!');
     }
 
@@ -301,12 +335,19 @@ class QuestionController extends Controller
             abort(403, 'Questions created by superadmin or assigned globally cannot be deleted by university admins.');
         }
 
+        $secId = $request->input('section_id') ?? $question->section_id;
+        $returnTo = $request->input('return_to');
+
         AuditLog::log('deleted_question', 'Question', $question->id);
 
         $question->options()->delete();
         $question->translations()->delete();
         $question->universities()->detach();
         $question->delete();
+
+        if ($returnTo === 'section_modal' && $secId) {
+            return redirect()->route('admin.sections.index', ['open_section_modal' => $secId])->with('success', 'Question deleted successfully!');
+        }
 
         return redirect()->route('admin.questions.index')->with('success', 'Question deleted successfully!');
     }

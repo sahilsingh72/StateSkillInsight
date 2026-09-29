@@ -2,6 +2,68 @@
 
 @section('title', $category->name . ' - Survey Questionnaire')
 
+@push('styles')
+<style>
+    /* Voice Recorder Custom UI */
+    .voice-recorder-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s ease;
+    }
+
+    .voice-mic-icon-wrapper {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: idlePulse 2.5s infinite ease-in-out;
+    }
+
+    @keyframes idlePulse {
+        0%, 100% { transform: scale(1); box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35); }
+        50% { transform: scale(1.06); box-shadow: 0 6px 20px rgba(239, 68, 68, 0.55); }
+    }
+
+    /* Live Studio Box with Neon Audio Catch Waveform (Matching Reference Image) */
+    .voice-studio-box {
+        background: radial-gradient(ellipse at center, #0f172a 0%, #060913 100%);
+        border: 1px solid rgba(139, 92, 246, 0.35);
+        box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.6), 0 0 20px rgba(139, 92, 246, 0.2);
+    }
+
+    .waveform-canvas-container {
+        background: #070a14;
+        border: 1px solid rgba(148, 163, 184, 0.15);
+        border-radius: 12px;
+        box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.7);
+        min-height: 95px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+
+    .pulse-rec-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: #ef4444;
+        box-shadow: 0 0 10px #ef4444;
+        animation: recDotBlink 1s infinite alternate;
+        display: inline-block;
+    }
+
+    @keyframes recDotBlink {
+        0% { opacity: 0.3; transform: scale(0.85); }
+        100% { opacity: 1; transform: scale(1.25); }
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="container" style="max-width: 900px;">
     
@@ -144,21 +206,83 @@
                             <textarea class="form-control q-input" name="answers[{{ $q->id }}]" rows="4" placeholder="Write detailed answer...">{{ $existingResponses[$q->id]->text_value ?? '' }}</textarea>
 
                         @elseif($q->type === 'voice')
-                            <div class="voice-recorder-box p-4 bg-light rounded-4 border text-center">
-                                <div class="mb-3">
-                                    <i class="bi bi-mic-fill fs-1 text-primary mb-2"></i>
-                                    <p class="small text-secondary mb-0">Record your response using your device microphone.</p>
-                                </div>
-                                <div class="d-flex justify-content-center gap-2 mb-3">
-                                    <button type="button" class="btn btn-danger px-4" id="startRec_{{ $q->id }}" onclick="startVoiceRecording({{ $q->id }})">
-                                        <i class="bi bi-record-circle me-1"></i> Start Recording
+                            @php
+                                $existingResp = $existingResponses[$q->id] ?? null;
+                                $existingVoice = $existingResp?->voiceResponse;
+                                $existingAudioUrl = $existingVoice ? Storage::url($existingVoice->file_path) : null;
+                                $hasAudio = !empty($existingAudioUrl) || ($existingResp && Str::contains($existingResp->text_value ?? '', 'Voice Recording'));
+                            @endphp
+                            <div class="voice-recorder-card p-3 p-md-4 rounded-4 border bg-light position-relative" id="voiceCard_{{ $q->id }}">
+                                
+                                <!-- State 1: Idle / Initial Start State -->
+                                <div id="voiceIdleState_{{ $q->id }}" class="{{ $hasAudio ? 'd-none' : '' }} text-center py-2">
+                                    <div class="voice-mic-icon-wrapper mb-3 mx-auto">
+                                        <i class="bi bi-mic-fill fs-2 text-white"></i>
+                                    </div>
+                                    <h6 class="fw-bold text-dark mb-1">Voice Answer Recording</h6>
+                                    <p class="small text-secondary mb-3" style="max-width: 480px; margin: 0 auto;">
+                                        Click start to record your voice answer using your microphone. You can review, retry, and re-record anytime before submitting.
+                                    </p>
+                                    <button type="button" class="btn btn-danger px-4 py-2 rounded-pill shadow-sm" id="startRecBtn_{{ $q->id }}" onclick="startVoiceRecording({{ $q->id }})">
+                                        <i class="bi bi-mic-fill me-1"></i> Start Recording
                                     </button>
-                                    <button type="button" class="btn btn-secondary px-4 d-none" id="stopRec_{{ $q->id }}" onclick="stopVoiceRecording({{ $q->id }})">
-                                        <i class="bi bi-stop-circle me-1"></i> Stop
-                                    </button>
                                 </div>
-                                <audio id="audioPreview_{{ $q->id }}" controls class="w-100 d-none mt-2"></audio>
-                                <span class="badge bg-success {{ isset($existingResponses[$q->id]) ? '' : 'd-none' }} mt-2" id="uploadStatus_{{ $q->id }}"><i class="bi bi-check-all me-1"></i> Audio Uploaded</span>
+
+                                <!-- State 2: Active Recording Studio with Audio Catch Waveform Animation -->
+                                <div id="voiceActiveState_{{ $q->id }}" class="d-none voice-studio-box p-3 p-md-4 rounded-4 shadow-lg text-center position-relative">
+                                    <!-- Recording Status & Live Timer Header -->
+                                    <div class="d-flex justify-content-between align-items-center mb-2 text-white-50 small px-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="pulse-rec-dot"></span>
+                                            <span class="text-white fw-semibold small">RECORDING VOICE...</span>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <i class="bi bi-stopwatch text-warning"></i>
+                                            <span class="font-monospace text-white fw-bold fs-6" id="recTimer_{{ $q->id }}">00:00</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Waveform Visualizer Canvas (Audio Catch Animation matching user reference image) -->
+                                    <div class="waveform-canvas-container p-2 mb-3">
+                                        <canvas id="voiceCanvas_{{ $q->id }}" class="w-100" height="90" style="max-height: 90px;"></canvas>
+                                    </div>
+
+                                    <!-- Recording Controls -->
+                                    <div class="d-flex justify-content-center align-items-center gap-2">
+                                        <button type="button" class="btn btn-outline-light btn-sm px-3 rounded-pill" onclick="cancelVoiceRecording({{ $q->id }})">
+                                            <i class="bi bi-x-circle me-1"></i> Cancel
+                                        </button>
+                                        <button type="button" class="btn btn-danger px-4 py-2 rounded-pill fw-bold shadow-sm" id="stopRecBtn_{{ $q->id }}" onclick="stopVoiceRecording({{ $q->id }})">
+                                            <i class="bi bi-stop-circle-fill me-1"></i> Stop Recording
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- State 3: Completed Preview with Retry / Record Again Button -->
+                                <div id="voicePreviewState_{{ $q->id }}" class="{{ $hasAudio ? '' : 'd-none' }} p-3 bg-white rounded-3 border">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="rounded-circle p-2 bg-success-subtle text-success d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                                <i class="bi bi-check-lg fw-bold fs-5"></i>
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold text-dark small" id="uploadStatusText_{{ $q->id }}">Voice Answer Recorded</div>
+                                                <small class="text-secondary" id="recDurationLabel_{{ $q->id }}">{{ $existingVoice ? 'Saved (' . $existingVoice->duration_seconds . 's)' : 'Audio uploaded & ready' }}</small>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Retry Button to Record Again -->
+                                        <button type="button" class="btn btn-outline-primary btn-sm px-3 rounded-pill fw-semibold" id="retryRecBtn_{{ $q->id }}" onclick="retryVoiceRecording({{ $q->id }})" title="Discard current recording and record again">
+                                            <i class="bi bi-arrow-counterclockwise me-1"></i> Record Again (Retry)
+                                        </button>
+                                    </div>
+
+                                    <!-- Audio Player Preview -->
+                                    <audio id="audioPreview_{{ $q->id }}" controls class="w-100" src="{{ $existingAudioUrl ?? '' }}" style="outline: none; border-radius: 20px;"></audio>
+                                </div>
+
+                                <!-- Hidden input storing audio reference for form autosave and validations -->
+                                <input type="hidden" class="q-input voice-recorded-flag" name="answers[{{ $q->id }}]" id="voiceRecordedInput_{{ $q->id }}" value="{{ $hasAudio ? ($existingResp->text_value ?? '1') : '' }}">
                             </div>
 
                         @else
@@ -171,13 +295,15 @@
             <!-- Action Buttons -->
             <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
                 @php
-                    $prevSec = $sections->firstWhere('order', $currentSection->order - 1);
-                    $nextSec = $sections->firstWhere('order', $currentSection->order + 1);
+                    $sectionsList = $sections->values();
+                    $currentIdx = $sectionsList->search(fn($sec) => $sec->id == $currentSection->id);
+                    $prevSec = ($currentIdx !== false && $currentIdx > 0) ? $sectionsList->get($currentIdx - 1) : null;
+                    $nextSec = ($currentIdx !== false && $currentIdx < $sectionsList->count() - 1) ? $sectionsList->get($currentIdx + 1) : null;
                 @endphp
 
                 @if($prevSec)
                     <button type="button" onclick="navigateSection('{{ route('survey.take', ['token' => $respondent->token, 'section' => $prevSec->id]) }}', false)" class="btn btn-outline-secondary px-4">
-                        <i class="bi bi-arrow-left me-1"></i> Previous Section
+                        <i class="bi bi-arrow-left me-1"></i> Previous
                     </button>
                 @else
                     <div></div>
@@ -185,7 +311,7 @@
 
                 @if($nextSec)
                     <button type="button" onclick="navigateSection('{{ route('survey.take', ['token' => $respondent->token, 'section' => $nextSec->id]) }}', true)" class="btn btn-uni-primary px-4 fw-bold">
-                        Next Section <i class="bi bi-arrow-right ms-1"></i>
+                        Next <i class="bi bi-arrow-right ms-1"></i>
                     </button>
                 @else
                     <button type="button" onclick="navigateSection('{{ route('survey.review', ['token' => $respondent->token]) }}', true)" class="btn btn-success px-4 fw-bold">
@@ -203,6 +329,12 @@
 <script>
     let mediaRecorders = {};
     let audioChunks = {};
+    let audioStreams = {};
+    let audioContexts = {};
+    let analyserNodes = {};
+    let animationFrames = {};
+    let timerIntervals = {};
+    let recStartTimes = {};
 
     // Auto save trigger on change
     document.querySelectorAll('.q-input').forEach(input => {
@@ -248,8 +380,8 @@
                 const input = block.querySelector('input[type="text"], textarea');
                 if (input && input.value && input.value.trim() !== '') answered = true;
             } else if (qType === 'voice') {
-                const uploadStatus = document.getElementById(`uploadStatus_${qId}`);
-                if (uploadStatus && !uploadStatus.classList.contains('d-none')) answered = true;
+                const voiceInput = document.getElementById(`voiceRecordedInput_${qId}`);
+                if (voiceInput && voiceInput.value && voiceInput.value.trim() !== '') answered = true;
             } else {
                 const anyInput = block.querySelector('.q-input');
                 if (anyInput && anyInput.value && anyInput.value.trim() !== '') answered = true;
@@ -311,6 +443,7 @@
 
     function triggerAutoSave() {
         const badge = document.getElementById('autoSaveBadge');
+        if (!badge) return;
         badge.className = 'badge bg-warning text-dark border';
         badge.innerHTML = '<i class="bi bi-cloud-arrow-up me-1"></i> Saving...';
 
@@ -335,10 +468,15 @@
         });
     }
 
-    // Voice Recorder Browser MediaRecorder Implementation
+    // ==========================================
+    // Advanced Voice Recording & Audio Waveform Visualizer
+    // ==========================================
     function startVoiceRecording(qId) {
         navigator.mediaDevices.getUserMedia({ audio: true })
             .then(stream => {
+                audioStreams[qId] = stream;
+
+                // MediaRecorder Setup
                 const mediaRecorder = new MediaRecorder(stream);
                 mediaRecorders[qId] = mediaRecorder;
                 audioChunks[qId] = [];
@@ -348,34 +486,260 @@
                 };
 
                 mediaRecorder.onstop = () => {
+                    const elapsedSec = Math.round((Date.now() - (recStartTimes[qId] || Date.now())) / 1000) || 1;
                     const audioBlob = new Blob(audioChunks[qId], { type: 'audio/webm' });
                     const audioUrl = URL.createObjectURL(audioBlob);
+                    
                     const audioPrev = document.getElementById(`audioPreview_${qId}`);
-                    audioPrev.src = audioUrl;
-                    audioPrev.classList.remove('d-none');
+                    if (audioPrev) {
+                        audioPrev.src = audioUrl;
+                    }
 
-                    uploadVoiceAudio(qId, audioBlob);
+                    const durationLabel = document.getElementById(`recDurationLabel_${qId}`);
+                    if (durationLabel) {
+                        durationLabel.innerText = `Duration: ${elapsedSec}s · Uploading...`;
+                    }
+
+                    uploadVoiceAudio(qId, audioBlob, elapsedSec);
                 };
 
                 mediaRecorder.start();
-                document.getElementById(`startRec_${qId}`).classList.add('d-none');
-                document.getElementById(`stopRec_${qId}`).classList.remove('d-none');
+                recStartTimes[qId] = Date.now();
+
+                // UI Transition: Show active recording studio box
+                document.getElementById(`voiceIdleState_${qId}`)?.classList.add('d-none');
+                document.getElementById(`voicePreviewState_${qId}`)?.classList.add('d-none');
+                document.getElementById(`voiceActiveState_${qId}`)?.classList.remove('d-none');
+
+                // Start Live Timer
+                const timerEl = document.getElementById(`recTimer_${qId}`);
+                if (timerEl) {
+                    timerEl.innerText = '00:00';
+                    clearInterval(timerIntervals[qId]);
+                    timerIntervals[qId] = setInterval(() => {
+                        const totalSec = Math.floor((Date.now() - recStartTimes[qId]) / 1000);
+                        const mins = String(Math.floor(totalSec / 60)).padStart(2, '0');
+                        const secs = String(totalSec % 60).padStart(2, '0');
+                        timerEl.innerText = `${mins}:${secs}`;
+                    }, 500);
+                }
+
+                // Setup AudioContext & Real-Time Waveform Visualizer
+                startWaveformVisualizer(qId, stream);
             })
-            .catch(err => alert("Microphone access permission required to record audio."));
+            .catch(err => {
+                console.error("Microphone access error:", err);
+                alert("Microphone access permission is required to record your voice answer.");
+            });
     }
 
     function stopVoiceRecording(qId) {
-        if (mediaRecorders[qId]) {
+        cleanupVoiceStreamAndVisualizer(qId);
+
+        if (mediaRecorders[qId] && mediaRecorders[qId].state !== 'inactive') {
             mediaRecorders[qId].stop();
-            document.getElementById(`stopRec_${qId}`).classList.add('d-none');
-            document.getElementById(`startRec_${qId}`).classList.remove('d-none');
+        }
+
+        document.getElementById(`voiceActiveState_${qId}`)?.classList.add('d-none');
+        document.getElementById(`voicePreviewState_${qId}`)?.classList.remove('d-none');
+    }
+
+    function cancelVoiceRecording(qId) {
+        cleanupVoiceStreamAndVisualizer(qId);
+
+        if (mediaRecorders[qId] && mediaRecorders[qId].state !== 'inactive') {
+            mediaRecorders[qId].ondataavailable = null;
+            mediaRecorders[qId].onstop = null;
+            mediaRecorders[qId].stop();
+        }
+
+        document.getElementById(`voiceActiveState_${qId}`)?.classList.add('d-none');
+
+        const hasExisting = document.getElementById(`voiceRecordedInput_${qId}`)?.value;
+        if (hasExisting) {
+            document.getElementById(`voicePreviewState_${qId}`)?.classList.remove('d-none');
+        } else {
+            document.getElementById(`voiceIdleState_${qId}`)?.classList.remove('d-none');
         }
     }
 
-    function uploadVoiceAudio(qId, blob) {
+    function retryVoiceRecording(qId) {
+        // Clear previous audio
+        const audioPrev = document.getElementById(`audioPreview_${qId}`);
+        if (audioPrev) {
+            audioPrev.pause();
+            audioPrev.removeAttribute('src');
+            audioPrev.load();
+        }
+
+        // Reset input flag and UI
+        const recordedInput = document.getElementById(`voiceRecordedInput_${qId}`);
+        if (recordedInput) {
+            recordedInput.value = '';
+        }
+
+        document.getElementById(`voicePreviewState_${qId}`)?.classList.add('d-none');
+        
+        // Immediately start a fresh recording session
+        startVoiceRecording(qId);
+    }
+
+    function cleanupVoiceStreamAndVisualizer(qId) {
+        // Stop timer
+        if (timerIntervals[qId]) {
+            clearInterval(timerIntervals[qId]);
+            delete timerIntervals[qId];
+        }
+
+        // Cancel animation loop
+        if (animationFrames[qId]) {
+            cancelAnimationFrame(animationFrames[qId]);
+            delete animationFrames[qId];
+        }
+
+        // Close AudioContext
+        if (audioContexts[qId]) {
+            try { audioContexts[qId].close(); } catch(e) {}
+            delete audioContexts[qId];
+        }
+
+        // Stop microphone stream tracks
+        if (audioStreams[qId]) {
+            audioStreams[qId].getTracks().forEach(track => track.stop());
+            delete audioStreams[qId];
+        }
+    }
+
+    function startWaveformVisualizer(qId, stream) {
+        const canvas = document.getElementById(`voiceCanvas_${qId}`);
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        
+        let analyser = null;
+        let dataArray = null;
+
+        if (AudioContextClass) {
+            try {
+                const audioCtx = new AudioContextClass();
+                audioContexts[qId] = audioCtx;
+
+                const source = audioCtx.createMediaStreamSource(stream);
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 64; // Produces 32 frequency bins
+                analyser.smoothingTimeConstant = 0.8;
+                source.connect(analyser);
+
+                analyserNodes[qId] = analyser;
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+            } catch(e) {
+                console.warn("Web Audio API not fully available, falling back to simulated wave physics:", e);
+            }
+        }
+
+        // Resize canvas for sharp rendering on retina displays
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = (rect.width || 560) * dpr;
+        canvas.height = 90 * dpr;
+
+        let phase = 0;
+        const totalBars = 52; // Total audio equalizer bars across width
+
+        function renderFrame() {
+            animationFrames[qId] = requestAnimationFrame(renderFrame);
+
+            const width = canvas.width;
+            const height = canvas.height;
+            const centerY = height / 2;
+
+            ctx.clearRect(0, 0, width, height);
+
+            // Get live audio data if available
+            let avgVolume = 0;
+            if (analyser && dataArray) {
+                analyser.getByteFrequencyData(dataArray);
+                let sum = 0;
+                for (let i = 0; i < dataArray.length; i++) {
+                    sum += dataArray[i];
+                }
+                avgVolume = sum / dataArray.length;
+            }
+
+            // Create stunning vertical gradient (Violet/Purple to Electric Indigo to Sky Cyan)
+            const gradient = ctx.createLinearGradient(0, centerY - 38 * dpr, 0, centerY + 38 * dpr);
+            gradient.addColorStop(0.0, '#d8b4fe'); // Light violet top
+            gradient.addColorStop(0.25, '#a855f7'); // Vibrant Purple
+            gradient.addColorStop(0.55, '#818cf8'); // Electric Blue / Indigo
+            gradient.addColorStop(0.85, '#38bdf8'); // Sky Cyan
+            gradient.addColorStop(1.0, '#06b6d4'); // Deep Cyan bottom
+
+            ctx.fillStyle = gradient;
+
+            const barWidth = Math.max(3 * dpr, (width / totalBars) * 0.46);
+            const barSpacing = width / totalBars;
+            const halfBars = totalBars / 2;
+
+            phase += 0.08;
+
+            for (let i = 0; i < totalBars; i++) {
+                // Distance from center (0 at middle, 1 at wings)
+                const distFromCenter = Math.abs(i - halfBars) / halfBars;
+                
+                // Base minimal height for horizontal resting line (as in reference image)
+                const baselineHeight = 3.5 * dpr;
+
+                // Center weighting (bell curve): peak at center, tapering down to edges
+                const centerWeight = Math.pow(1 - distFromCenter, 2.2);
+
+                let barHeight = baselineHeight;
+
+                if (avgVolume > 2 && analyser && dataArray) {
+                    // Map bar to frequency bin
+                    const freqIdx = Math.floor((1 - distFromCenter) * (dataArray.length - 1));
+                    const freqVal = dataArray[freqIdx] || avgVolume;
+                    const dynamicBoost = (freqVal / 255) * 75 * dpr;
+                    barHeight = baselineHeight + dynamicBoost * centerWeight;
+                } else {
+                    // Smooth subtle idle listening wave
+                    const idleSine = Math.sin(phase + i * 0.28) * (1.5 * dpr);
+                    barHeight = baselineHeight + Math.max(0, idleSine * centerWeight * 4);
+                }
+
+                // Add slight organic breathing to center bars
+                const organicPulse = Math.sin(phase * 1.5 + i * 0.4) * (2 * dpr) * centerWeight;
+                barHeight = Math.max(baselineHeight, barHeight + organicPulse);
+
+                // Coordinates for centered vertical rounded bar
+                const x = i * barSpacing + (barSpacing - barWidth) / 2;
+                const topY = centerY - barHeight / 2;
+                const radius = barWidth / 2;
+
+                // Draw rounded pill bar
+                ctx.beginPath();
+                if (typeof ctx.roundRect === 'function') {
+                    ctx.roundRect(x, topY, barWidth, barHeight, radius);
+                } else {
+                    ctx.rect(x, topY, barWidth, barHeight);
+                }
+                ctx.fill();
+            }
+        }
+
+        renderFrame();
+    }
+
+    function uploadVoiceAudio(qId, blob, duration) {
         const formData = new FormData();
         formData.append('question_id', qId);
         formData.append('audio_file', blob, `voice_${qId}.webm`);
+        formData.append('duration', duration);
+
+        const uploadText = document.getElementById(`uploadStatusText_${qId}`);
+        if (uploadText) {
+            uploadText.innerText = 'Uploading voice answer...';
+        }
 
         fetch("{{ route('survey.voice_upload', $respondent->token) }}", {
             method: 'POST',
@@ -387,7 +751,34 @@
         .then(res => res.json())
         .then(data => {
             if(data.success) {
-                document.getElementById(`uploadStatus_${qId}`).classList.remove('d-none');
+                if (uploadText) {
+                    uploadText.innerText = 'Voice Answer Recorded & Saved';
+                }
+                const durationLabel = document.getElementById(`recDurationLabel_${qId}`);
+                if (durationLabel) {
+                    durationLabel.innerText = `Duration: ${duration}s · Uploaded successfully`;
+                }
+
+                const recordedInput = document.getElementById(`voiceRecordedInput_${qId}`);
+                if (recordedInput) {
+                    recordedInput.value = `[Voice Recording Uploaded: ${duration}s]`;
+                }
+
+                // Clear error highlight on question block if any
+                const block = document.querySelector(`[data-question-id="${qId}"]`);
+                if (block) {
+                    block.classList.remove('border-danger', 'bg-danger-subtle');
+                    const errEl = block.querySelector('.required-error-msg');
+                    if (errEl) errEl.classList.add('d-none');
+                }
+
+                triggerAutoSave();
+            }
+        })
+        .catch(err => {
+            console.error("Upload failed:", err);
+            if (uploadText) {
+                uploadText.innerText = 'Audio recorded (upload pending)';
             }
         });
     }

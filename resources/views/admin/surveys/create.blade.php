@@ -26,18 +26,55 @@
             </div>
             <div class="row g-3 mb-4">
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold">Target Respondents</label>
-                    <input type="text" name="target_respondents" class="form-control" value="All Students & Alumni">
+                    <label class="form-label fw-semibold">Target Respondents Description</label>
+                    <input type="text" name="target_respondents" class="form-control" value="{{ old('target_respondents', 'All Students & Alumni') }}" placeholder="e.g. All Final Year Students">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Status</label>
                     <select name="status" class="form-select">
-                        <option value="draft">Draft</option>
-                        <option value="published" selected>Published</option>
-                        <option value="paused">Paused</option>
+                        <option value="draft" {{ old('status') == 'draft' ? 'selected' : '' }}>Draft</option>
+                        <option value="published" {{ old('status', 'published') == 'published' ? 'selected' : '' }}>Published</option>
+                        <option value="paused" {{ old('status') == 'paused' ? 'selected' : '' }}>Paused</option>
                     </select>
                 </div>
-            <div class="mb-4 p-3 bg-light rounded-3 border">
+            </div>
+
+            <!-- Campaign Duration & Respondent Limit Settings -->
+            <div class="card bg-light border p-3 mb-4 rounded-3">
+                <h6 class="fw-bold text-dark mb-2">
+                    <i class="bi bi-clock-history me-1 text-primary"></i> Survey Duration & Respondent Limit
+                </h6>
+                <p class="text-secondary small mb-3">Set the active start/end duration window and a maximum respondent capacity for this survey.</p>
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold small text-dark mb-1">
+                            <i class="bi bi-calendar-event me-1 text-primary"></i> Duration From (Start Date)
+                        </label>
+                        <input type="date" name="start_date" class="form-control form-control-sm" value="{{ old('start_date') }}">
+                        <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">Leave blank to open immediately.</small>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold small text-dark mb-1">
+                            <i class="bi bi-calendar-check me-1 text-danger"></i> Duration To (End Date)
+                        </label>
+                        <input type="date" name="end_date" class="form-control form-control-sm" value="{{ old('end_date') }}">
+                        <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">Leave blank for no expiration date.</small>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold small text-dark mb-1">
+                            <i class="bi bi-people-fill me-1 text-success"></i> Respondent Limit (Number)
+                        </label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white"><i class="bi bi-hash"></i></span>
+                            <input type="number" name="max_respondents" class="form-control form-control-sm" min="1" step="1" placeholder="e.g. 500" value="{{ old('max_respondents') }}">
+                        </div>
+                        <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">Leave blank for unlimited submissions.</small>
+                    </div>
+                </div>
+            </div>
                 <label class="form-label fw-semibold text-primary mb-2">
                     <i class="bi bi-building me-1"></i> Target Institution Scope
                 </label>
