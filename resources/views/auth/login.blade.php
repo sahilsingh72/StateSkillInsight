@@ -114,7 +114,7 @@
                 <i class="bi bi-shield-check me-1 text-warning"></i> Official Portal | State Higher Education & Skill Research System
             </div>
             <div>
-                <span><i class="bi bi-lock-fill me-1 text-success"></i> 256-Bit SSL Encrypted SSO</span>
+                <!-- <span><i class="bi bi-lock-fill me-1 text-success"></i> 256-Bit SSL Encrypted SSO</span> -->
             </div>
         </div>
     </div>

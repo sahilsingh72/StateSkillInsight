@@ -11,9 +11,15 @@
             </span>
             <h4 class="fw-bold text-dark mb-0">Edit Question Details</h4>
         </div>
-        <a href="{{ route('admin.questions.index') }}" class="btn btn-light border btn-sm">
-            <i class="bi bi-arrow-left me-1"></i> Back to Question Bank
-        </a>
+        @if(request('return_to') === 'section_modal' || old('return_to') === 'section_modal')
+            <a href="{{ route('admin.sections.index', ['open_section_modal' => request('section_id', old('section_id_return', $question->section_id))]) }}" class="btn btn-light border btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Back to Section
+            </a>
+        @else
+            <a href="{{ route('admin.questions.index') }}" class="btn btn-light border btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Back to Question Bank
+            </a>
+        @endif
     </div>
 
     @if(isset($errors) && $errors->any())
@@ -30,6 +36,11 @@
         <form action="{{ route('admin.questions.update', $question->id) }}" method="POST">
             @csrf
             @method('PUT')
+
+            @if(request('return_to') === 'section_modal' || old('return_to') === 'section_modal')
+                <input type="hidden" name="return_to" value="section_modal">
+                <input type="hidden" name="section_id_return" value="{{ request('section_id', old('section_id_return', $question->section_id)) }}">
+            @endif
 
             <div class="mb-3">
                 <label class="form-label fw-semibold">Target Category & Section <span class="text-danger">*</span></label>
@@ -149,7 +160,11 @@
             </div>
 
             <div class="d-flex justify-content-between align-items-center border-top pt-3">
-                <a href="{{ route('admin.questions.index') }}" class="btn btn-outline-secondary px-4">Cancel</a>
+                @if(request('return_to') === 'section_modal' || old('return_to') === 'section_modal')
+                    <a href="{{ route('admin.sections.index', ['open_section_modal' => request('section_id', old('section_id_return', $question->section_id))]) }}" class="btn btn-outline-secondary px-4">Cancel</a>
+                @else
+                    <a href="{{ route('admin.questions.index') }}" class="btn btn-outline-secondary px-4">Cancel</a>
+                @endif
                 <button type="submit" class="btn btn-primary-custom px-4">
                     <i class="bi bi-check-circle me-1"></i> Update Question
                 </button>

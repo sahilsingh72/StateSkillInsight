@@ -14,7 +14,7 @@ class SurveyController extends Controller
     public function index()
     {
         $user = auth()->user();
-        $query = Survey::with('categories', 'university', 'universities');
+        $query = Survey::with(['categories', 'university', 'universities'])->withCount('respondentSurveys');
 
         if ($user && !$user->isSuperAdmin()) {
             $query->where(function ($q) use ($user) {
@@ -57,6 +57,9 @@ class SurveyController extends Controller
             'description' => 'nullable|string',
             'opening_message' => 'nullable|string',
             'target_respondents' => 'nullable|string',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'max_respondents' => 'nullable|integer|min:1',
             'status' => 'required|in:draft,published,paused,closed,archived',
             'scope_type' => 'required|in:global,specific',
             'university_ids' => 'nullable|array',
@@ -141,6 +144,9 @@ class SurveyController extends Controller
             'subtitle' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'target_respondents' => 'nullable|string',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'max_respondents' => 'nullable|integer|min:1',
             'status' => 'required|in:draft,published,paused,closed,archived',
             'scope_type' => 'required|in:global,specific',
             'university_ids' => 'nullable|array',

@@ -25,6 +25,11 @@ class PublicSurveyController extends Controller
     public function landing(Request $request)
     {
         $survey = Survey::where('status', 'published')->first() ?? Survey::first();
+        
+        if ($survey && !$survey->isAcceptingResponses()) {
+            return view('survey.closed', compact('survey'));
+        }
+
         $categories = $survey ? $survey->categories()->where('is_active', true)->orderBy('order')->get() : collect();
 
         return view('survey.landing', compact('survey', 'categories'));
@@ -36,8 +41,15 @@ class PublicSurveyController extends Controller
     public function registerCategory(Request $request, string $categoryCode)
     {
         $survey = Survey::where('status', 'published')->first() ?? Survey::first();
+
+        if (!$survey || !$survey->isAcceptingResponses()) {
+            return view('survey.closed', compact('survey'));
+        }
+
         $category = SurveyCategory::where('survey_id', $survey->id)->where('code', $categoryCode)->firstOrFail();
-        $institutions = University::where('is_active', true)->orderBy('type')->orderBy('name')->get();
+        $institutions = University::with(['colleges' => function ($q) {
+            $q->where('is_active', true)->orderBy('name');
+        }])->where('is_active', true)->orderBy('type')->orderBy('name')->get();
 
         return view('survey.register', compact('survey', 'category', 'institutions'));
     }
@@ -47,11 +59,19 @@ class PublicSurveyController extends Controller
      */
     public function startSurvey(Request $request)
     {
+        $survey = Survey::where('status', 'published')->first() ?? Survey::first();
+
+        if (!$survey || !$survey->isAcceptingResponses()) {
+            return view('survey.closed', compact('survey'));
+        }
+
         $request->validate([
-            'university_id' => 'required|exists:universities,id',
+            'university_id' => 'nullable|exists:universities,id',
+            'institution_id' => 'nullable|exists:universities,id',
+            'college_id' => 'nullable|string',
             'category_code' => 'required|string',
             'name' => 'required|string|max:255',
-            'email' => 'nullable|email|max:255',
+            'email' => 'required|email|max:255',
             'mobile' => 'nullable|string|max:20',
             'programme' => 'nullable|string|max:255',
             'department' => 'nullable|string|max:255',
@@ -59,7 +79,40 @@ class PublicSurveyController extends Controller
             'consent_given' => 'required|accepted',
         ]);
 
-        $survey = Survey::where('status', 'published')->first() ?? Survey::first();
+        $baseInstId = $request->input('institution_id') ?? $request->input('university_id');
+        if (!$baseInstId) {
+            return back()->withInput()->withErrors(['institution_id' => 'Please select your university or institution.']);
+        }
+
+        // Determine final university_id:
+        // If an affiliated college was chosen and is not 'main_campus', use that college ID
+        $collegeId = $request->input('college_id');
+        $finalUniversityId = ($collegeId && $collegeId !== 'main_campus' && is_numeric($collegeId))
+            ? (int)$collegeId
+            : (int)$baseInstId;
+
+        // Avoid multiple survey responses with the same email
+        if ($request->filled('email')) {
+            $inputEmail = strtolower(trim($request->email));
+            $existingSurvey = RespondentSurvey::where('survey_id', $survey->id)
+                ->whereHas('respondent', function ($q) use ($inputEmail) {
+                    $q->whereRaw('LOWER(email) = ?', [$inputEmail]);
+                })
+                ->first();
+
+            if ($existingSurvey) {
+                if ($existingSurvey->status === 'completed') {
+                    return back()->withInput()->withErrors([
+                        'email' => "This email address ({$request->email}) has already completed this survey. Duplicate responses with the same email are not permitted."
+                    ]);
+                } else {
+                    return back()->withInput()->withErrors([
+                        'email' => "A survey response with this email address ({$request->email}) has already been initiated. Duplicate responses with the same email are not permitted."
+                    ]);
+                }
+            }
+        }
+
         $category = SurveyCategory::where('survey_id', $survey->id)->where('code', $request->category_code)->firstOrFail();
 
         $token = Str::random(32);
@@ -75,7 +128,7 @@ class PublicSurveyController extends Controller
         }
 
         $respondent = Respondent::create([
-            'university_id' => $request->university_id,
+            'university_id' => $finalUniversityId,
             'token' => $token,
             'name' => $request->name,
             'email' => $request->email,
@@ -171,6 +224,25 @@ class PublicSurveyController extends Controller
         ]);
 
         $survey = Survey::find($invitation->survey_id) ?? Survey::where('status', 'published')->first() ?? Survey::first();
+
+        if (!$survey || !$survey->isAcceptingResponses()) {
+            return view('survey.closed', compact('survey'));
+        }
+
+        if (!empty($invitation->email)) {
+            $invEmail = strtolower(trim($invitation->email));
+            $existingSurvey = RespondentSurvey::where('survey_id', $survey->id)
+                ->where('status', 'completed')
+                ->whereHas('respondent', function ($q) use ($invEmail) {
+                    $q->whereRaw('LOWER(email) = ?', [$invEmail]);
+                })
+                ->first();
+
+            if ($existingSurvey) {
+                return redirect()->route('survey.landing')->with('error', "The email address ({$invitation->email}) associated with this invitation has already completed this survey.");
+            }
+        }
+
         $category = SurveyCategory::where('survey_id', $survey->id)
             ->where('code', $invitation->category_code)
             ->first() ?? $survey->categories()->orderBy('order')->first();
@@ -244,15 +316,6 @@ class PublicSurveyController extends Controller
                 ->orWhere('university_id', $uniId)
                 ->orWhereHas('universities', function ($uq) use ($uniId) {
                     $uq->where('universities.id', $uniId);
-                })
-                ->orWhereHas('questions', function ($q2) use ($uniId) {
-                    $q2->where(function ($gq2) {
-                        $gq2->whereNull('university_id')->whereDoesntHave('universities');
-                    })
-                    ->orWhere('university_id', $uniId)
-                    ->orWhereHas('universities', function ($uq2) use ($uniId) {
-                        $uq2->where('universities.id', $uniId);
-                    });
                 });
             })
             ->with(['questions' => function ($q) use ($uniId) {
@@ -263,6 +326,12 @@ class PublicSurveyController extends Controller
                     ->orWhere('university_id', $uniId)
                     ->orWhereHas('universities', function ($uq) use ($uniId) {
                         $uq->where('universities.id', $uniId);
+                    })
+                    ->orWhereHas('section', function ($secQ) use ($uniId) {
+                        $secQ->where('university_id', $uniId)
+                             ->orWhereHas('universities', function ($secUQ) use ($uniId) {
+                                 $secUQ->where('universities.id', $uniId);
+                             });
                     });
                 })->where('is_active', true)->orderBy('order');
             }, 'questions.options', 'questions.conditions', 'questions.translations'])
@@ -277,6 +346,7 @@ class PublicSurveyController extends Controller
 
         // Existing responses map
         $existingResponses = Response::where('respondent_survey_id', $respondentSurvey->id)
+            ->with('voiceResponse')
             ->get()
             ->keyBy('question_id');
 
@@ -371,15 +441,29 @@ class PublicSurveyController extends Controller
 
         $sections = $category->sections()
             ->where(function ($q) use ($uniId) {
-                $q->whereNull('university_id')
-                  ->orWhere('university_id', $uniId)
-                  ->orWhereHas('questions', function ($q2) use ($uniId) {
-                      $q2->whereNull('university_id')->orWhere('university_id', $uniId);
-                  });
+                $q->where(function ($gq) {
+                    $gq->whereNull('university_id')->whereDoesntHave('universities');
+                })
+                ->orWhere('university_id', $uniId)
+                ->orWhereHas('universities', function ($uq) use ($uniId) {
+                    $uq->where('universities.id', $uniId);
+                });
             })
             ->with(['questions' => function ($q) use ($uniId) {
                 $q->where(function ($sub) use ($uniId) {
-                    $sub->whereNull('university_id')->orWhere('university_id', $uniId);
+                    $sub->where(function ($gq) {
+                        $gq->whereNull('university_id')->whereDoesntHave('universities');
+                    })
+                    ->orWhere('university_id', $uniId)
+                    ->orWhereHas('universities', function ($uq) use ($uniId) {
+                        $uq->where('universities.id', $uniId);
+                    })
+                    ->orWhereHas('section', function ($secQ) use ($uniId) {
+                        $secQ->where('university_id', $uniId)
+                             ->orWhereHas('universities', function ($secUQ) use ($uniId) {
+                                 $secUQ->where('universities.id', $uniId);
+                             });
+                    });
                 })->where('is_active', true)->orderBy('order');
             }, 'questions.options'])
             ->orderBy('order')
@@ -403,15 +487,29 @@ class PublicSurveyController extends Controller
         $category = $respondentSurvey->category;
         $sections = $category->sections()
             ->where(function ($q) use ($uniId) {
-                $q->whereNull('university_id')
-                  ->orWhere('university_id', $uniId)
-                  ->orWhereHas('questions', function ($q2) use ($uniId) {
-                      $q2->whereNull('university_id')->orWhere('university_id', $uniId);
-                  });
+                $q->where(function ($gq) {
+                    $gq->whereNull('university_id')->whereDoesntHave('universities');
+                })
+                ->orWhere('university_id', $uniId)
+                ->orWhereHas('universities', function ($uq) use ($uniId) {
+                    $uq->where('universities.id', $uniId);
+                });
             })
             ->with(['questions' => function ($q) use ($uniId) {
                 $q->where(function ($sub) use ($uniId) {
-                    $sub->whereNull('university_id')->orWhere('university_id', $uniId);
+                    $sub->where(function ($gq) {
+                        $gq->whereNull('university_id')->whereDoesntHave('universities');
+                    })
+                    ->orWhere('university_id', $uniId)
+                    ->orWhereHas('universities', function ($uq) use ($uniId) {
+                        $uq->where('universities.id', $uniId);
+                    })
+                    ->orWhereHas('section', function ($secQ) use ($uniId) {
+                        $secQ->where('university_id', $uniId)
+                             ->orWhereHas('universities', function ($secUQ) use ($uniId) {
+                                 $secUQ->where('universities.id', $uniId);
+                             });
+                    });
                 })->where('is_active', true)->where('is_required', true);
             }])
             ->get();
@@ -497,6 +595,25 @@ class PublicSurveyController extends Controller
             'university_id' => $university->id,
             'programme' => $programme,
             'departments' => $departments,
+        ]);
+    }
+
+    /**
+     * API Endpoint: Fetch affiliated colleges for a selected university.
+     */
+    public function getUniversityColleges(University $university)
+    {
+        $colleges = $university->colleges()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'short_name']);
+
+        return response()->json([
+            'success' => true,
+            'has_colleges' => $colleges->isNotEmpty(),
+            'university_id' => $university->id,
+            'university_name' => $university->name,
+            'colleges' => $colleges,
         ]);
     }
 }

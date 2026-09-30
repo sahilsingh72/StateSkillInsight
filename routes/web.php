@@ -23,6 +23,7 @@ Route::get('/', [PublicSurveyController::class, 'landing'])->name('survey.landin
 Route::get('/locale/{locale}', [PublicSurveyController::class, 'setLocale'])->name('survey.locale');
 Route::get('/api/universities/{university}/programmes', [PublicSurveyController::class, 'getUniversityProgrammes'])->name('api.university.programmes');
 Route::get('/api/universities/{university}/departments', [PublicSurveyController::class, 'getUniversityDepartments'])->name('api.university.departments');
+Route::get('/api/universities/{university}/colleges', [PublicSurveyController::class, 'getUniversityColleges'])->name('api.university.colleges');
 Route::get('/survey/category/{category}', [PublicSurveyController::class, 'registerCategory'])->name('survey.register');
 Route::post('/survey/start', [PublicSurveyController::class, 'startSurvey'])->name('survey.start');
 Route::get('/survey/start/{token}', [PublicSurveyController::class, 'startByToken'])->name('survey.start_token');
