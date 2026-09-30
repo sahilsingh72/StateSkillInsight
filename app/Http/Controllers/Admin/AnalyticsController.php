@@ -35,42 +35,54 @@ class AnalyticsController extends Controller
 
     public function category1()
     {
+        $uniId = $this->getUniId();
         $query = Respondent::where('category_code', 'cat_1');
-        if ($uniId = $this->getUniId()) {
+        if ($uniId) {
             $query->where('university_id', $uniId);
         }
         $respondents = $query->paginate(15);
-        return view('admin.analytics.category1', compact('respondents'));
+        $metrics = $this->analyticsService->getCategory1Metrics($uniId);
+
+        return view('admin.analytics.category1', compact('respondents', 'metrics'));
     }
 
     public function category2()
     {
+        $uniId = $this->getUniId();
         $query = Respondent::where('category_code', 'cat_2');
-        if ($uniId = $this->getUniId()) {
+        if ($uniId) {
             $query->where('university_id', $uniId);
         }
         $respondents = $query->paginate(15);
-        return view('admin.analytics.category2', compact('respondents'));
+        $metrics = $this->analyticsService->getCategory2Metrics($uniId);
+
+        return view('admin.analytics.category2', compact('respondents', 'metrics'));
     }
 
     public function category3()
     {
+        $uniId = $this->getUniId();
         $query = Respondent::where('category_code', 'cat_3');
-        if ($uniId = $this->getUniId()) {
+        if ($uniId) {
             $query->where('university_id', $uniId);
         }
         $respondents = $query->paginate(15);
-        return view('admin.analytics.category3', compact('respondents'));
+        $metrics = $this->analyticsService->getCategory3Metrics($uniId);
+
+        return view('admin.analytics.category3', compact('respondents', 'metrics'));
     }
 
     public function category4()
     {
+        $uniId = $this->getUniId();
         $query = Respondent::where('category_code', 'cat_4');
-        if ($uniId = $this->getUniId()) {
+        if ($uniId) {
             $query->where('university_id', $uniId);
         }
         $respondents = $query->paginate(15);
-        return view('admin.analytics.category4', compact('respondents'));
+        $metrics = $this->analyticsService->getCategory4Metrics($uniId);
+
+        return view('admin.analytics.category4', compact('respondents', 'metrics'));
     }
 
     public function crossAnalysis(Request $request)

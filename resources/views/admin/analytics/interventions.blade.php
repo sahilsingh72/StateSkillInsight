@@ -12,7 +12,7 @@
 
 <!-- Active Rules Grid -->
 <div class="row g-4 mb-4">
-    @foreach($rules as $r)
+    @forelse($rules as $r)
         <div class="col-md-6">
             <div class="card-custom p-4 h-100 border-start border-{{ $r->priority == 'high' ? 'danger' : 'warning' }} border-4">
                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -25,7 +25,14 @@
                 </div>
             </div>
         </div>
-    @endforeach
+    @empty
+        <div class="col-12">
+            <div class="card-custom p-4 text-center text-muted">
+                <i class="bi bi-gear fs-2 d-block mb-2 text-secondary"></i>
+                No intervention rules configured yet.
+            </div>
+        </div>
+    @endforelse
 </div>
 
 <!-- Assigned Interventions List -->
@@ -43,7 +50,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($interventions as $item)
+                @forelse($interventions as $item)
                     <tr>
                         <td>
                             <strong>{{ $item->respondentSurvey->respondent->name ?? 'Respondent' }}</strong><br>
@@ -61,7 +68,14 @@
                             <a href="{{ route('admin.respondents.show', $item->respondentSurvey->respondent_id) }}" class="btn btn-sm btn-light border">View Respondent</a>
                         </td>
                     </tr>
-                @endforeach
+                @empty
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                            No respondent interventions triggered yet.
+                        </td>
+                    </tr>
+                @endforelse
             </tbody>
         </table>
     </div>

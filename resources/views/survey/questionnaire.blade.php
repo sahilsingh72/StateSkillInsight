@@ -214,76 +214,76 @@
                             @endphp
                             <div class="voice-recorder-card p-3 p-md-4 rounded-4 border bg-light position-relative" id="voiceCard_{{ $q->id }}">
                                 
-                                <!-- State 1: Idle / Initial Start State -->
-                                <div id="voiceIdleState_{{ $q->id }}" class="{{ $hasAudio ? 'd-none' : '' }} text-center py-2">
-                                    <div class="voice-mic-icon-wrapper mb-3 mx-auto">
-                                        <i class="bi bi-mic-fill fs-2 text-white"></i>
-                                    </div>
-                                    <h6 class="fw-bold text-dark mb-1">Voice Answer Recording</h6>
-                                    <p class="small text-secondary mb-3" style="max-width: 480px; margin: 0 auto;">
-                                        Click start to record your voice answer using your microphone. You can review, retry, and re-record anytime before submitting.
-                                    </p>
-                                    <button type="button" class="btn btn-danger px-4 py-2 rounded-pill shadow-sm" id="startRecBtn_{{ $q->id }}" onclick="startVoiceRecording({{ $q->id }})">
-                                        <i class="bi bi-mic-fill me-1"></i> Start Recording
-                                    </button>
-                                </div>
+                                        <!-- State 1: Idle / Initial Start State -->
+                                        <div id="voiceIdleState_{{ $q->id }}" class="{{ $hasAudio ? 'd-none' : '' }} text-center py-2">
+                                            <div class="voice-mic-icon-wrapper mb-3 mx-auto">
+                                                <i class="bi bi-mic-fill fs-2 text-white"></i>
+                                            </div>
+                                            <h6 class="fw-bold text-dark mb-1">Voice Answer Recording</h6>
+                                            <p class="small text-secondary mb-3" style="max-width: 480px; margin: 0 auto;">
+                                                Click start to record your voice answer using your microphone. You can review, retry, and re-record anytime before submitting.
+                                            </p>
+                                            <button type="button" class="btn btn-danger px-4 py-2 rounded-pill shadow-sm" id="startRecBtn_{{ $q->id }}" onclick="startVoiceRecording({{ $q->id }})">
+                                                <i class="bi bi-mic-fill me-1"></i> Start Recording
+                                            </button>
+                                        </div>
 
-                                <!-- State 2: Active Recording Studio with Audio Catch Waveform Animation -->
-                                <div id="voiceActiveState_{{ $q->id }}" class="d-none voice-studio-box p-3 p-md-4 rounded-4 shadow-lg text-center position-relative">
-                                    <!-- Recording Status & Live Timer Header -->
-                                    <div class="d-flex justify-content-between align-items-center mb-2 text-white-50 small px-2">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <span class="pulse-rec-dot"></span>
-                                            <span class="text-white fw-semibold small">RECORDING VOICE...</span>
-                                        </div>
-                                        <div class="d-flex align-items-center gap-1">
-                                            <i class="bi bi-stopwatch text-warning"></i>
-                                            <span class="font-monospace text-white fw-bold fs-6" id="recTimer_{{ $q->id }}">00:00</span>
-                                        </div>
-                                    </div>
+                                        <!-- State 2: Active Recording Studio with Audio Catch Waveform Animation -->
+                                        <div id="voiceActiveState_{{ $q->id }}" class="d-none voice-studio-box p-3 p-md-4 rounded-4 shadow-lg text-center position-relative">
+                                            <!-- Recording Status & Live Timer Header -->
+                                            <div class="d-flex justify-content-between align-items-center mb-2 text-white-50 small px-2">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="pulse-rec-dot"></span>
+                                                    <span class="text-white fw-semibold small">RECORDING VOICE...</span>
+                                                </div>
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <i class="bi bi-stopwatch text-warning"></i>
+                                                    <span class="font-monospace text-white fw-bold fs-6" id="recTimer_{{ $q->id }}">00:00</span>
+                                                </div>
+                                            </div>
 
                                     <!-- Waveform Visualizer Canvas (Audio Catch Animation matching user reference image) -->
-                                    <div class="waveform-canvas-container p-2 mb-3">
-                                        <canvas id="voiceCanvas_{{ $q->id }}" class="w-100" height="90" style="max-height: 90px;"></canvas>
-                                    </div>
-
-                                    <!-- Recording Controls -->
-                                    <div class="d-flex justify-content-center align-items-center gap-2">
-                                        <button type="button" class="btn btn-outline-light btn-sm px-3 rounded-pill" onclick="cancelVoiceRecording({{ $q->id }})">
-                                            <i class="bi bi-x-circle me-1"></i> Cancel
-                                        </button>
-                                        <button type="button" class="btn btn-danger px-4 py-2 rounded-pill fw-bold shadow-sm" id="stopRecBtn_{{ $q->id }}" onclick="stopVoiceRecording({{ $q->id }})">
-                                            <i class="bi bi-stop-circle-fill me-1"></i> Stop Recording
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- State 3: Completed Preview with Retry / Record Again Button -->
-                                <div id="voicePreviewState_{{ $q->id }}" class="{{ $hasAudio ? '' : 'd-none' }} p-3 bg-white rounded-3 border">
-                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="rounded-circle p-2 bg-success-subtle text-success d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                                                <i class="bi bi-check-lg fw-bold fs-5"></i>
+                                            <div class="waveform-canvas-container p-2 mb-3">
+                                                <canvas id="voiceCanvas_{{ $q->id }}" class="w-100" height="90" style="max-height: 90px;"></canvas>
                                             </div>
-                                            <div>
-                                                <div class="fw-bold text-dark small" id="uploadStatusText_{{ $q->id }}">Voice Answer Recorded</div>
-                                                <small class="text-secondary" id="recDurationLabel_{{ $q->id }}">{{ $existingVoice ? 'Saved (' . $existingVoice->duration_seconds . 's)' : 'Audio uploaded & ready' }}</small>
+
+                                            <!-- Recording Controls -->
+                                            <div class="d-flex justify-content-center align-items-center gap-2">
+                                                <button type="button" class="btn btn-outline-light btn-sm px-3 rounded-pill" onclick="cancelVoiceRecording({{ $q->id }})">
+                                                    <i class="bi bi-x-circle me-1"></i> Cancel
+                                                </button>
+                                                <button type="button" class="btn btn-danger px-4 py-2 rounded-pill fw-bold shadow-sm" id="stopRecBtn_{{ $q->id }}" onclick="stopVoiceRecording({{ $q->id }})">
+                                                    <i class="bi bi-stop-circle-fill me-1"></i> Stop Recording
+                                                </button>
                                             </div>
                                         </div>
-                                        
-                                        <!-- Retry Button to Record Again -->
-                                        <button type="button" class="btn btn-outline-primary btn-sm px-3 rounded-pill fw-semibold" id="retryRecBtn_{{ $q->id }}" onclick="retryVoiceRecording({{ $q->id }})" title="Discard current recording and record again">
-                                            <i class="bi bi-arrow-counterclockwise me-1"></i> Record Again (Retry)
-                                        </button>
+
+                                        <!-- State 3: Completed Preview with Retry / Record Again Button -->
+                                        <div id="voicePreviewState_{{ $q->id }}" class="{{ $hasAudio ? '' : 'd-none' }} p-3 bg-white rounded-3 border">
+                                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div class="rounded-circle p-2 bg-success-subtle text-success d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                                        <i class="bi bi-check-lg fw-bold fs-5"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-bold text-dark small" id="uploadStatusText_{{ $q->id }}">Voice Answer Recorded</div>
+                                                        <small class="text-secondary" id="recDurationLabel_{{ $q->id }}">{{ $existingVoice ? 'Saved (' . $existingVoice->duration_seconds . 's)' : 'Audio uploaded & ready' }}</small>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Retry Button to Record Again -->
+                                                <button type="button" class="btn btn-outline-primary btn-sm px-3 rounded-pill fw-semibold" id="retryRecBtn_{{ $q->id }}" onclick="retryVoiceRecording({{ $q->id }})" title="Discard current recording and record again">
+                                                    <i class="bi bi-arrow-counterclockwise me-1"></i> Record Again (Retry)
+                                                </button>
+                                            </div>
+
+                                            <!-- Audio Player Preview -->
+                                            <audio id="audioPreview_{{ $q->id }}" controls class="w-100" src="{{ $existingAudioUrl ?? '' }}" style="outline: none; border-radius: 20px;"></audio>
+                                        </div>
+
+                                        <!-- Hidden input storing audio reference for form autosave and validations -->
+                                        <input type="hidden" class="q-input voice-recorded-flag" name="answers[{{ $q->id }}]" id="voiceRecordedInput_{{ $q->id }}" value="{{ $hasAudio ? ($existingResp->text_value ?? '1') : '' }}">
                                     </div>
-
-                                    <!-- Audio Player Preview -->
-                                    <audio id="audioPreview_{{ $q->id }}" controls class="w-100" src="{{ $existingAudioUrl ?? '' }}" style="outline: none; border-radius: 20px;"></audio>
-                                </div>
-
-                                <!-- Hidden input storing audio reference for form autosave and validations -->
-                                <input type="hidden" class="q-input voice-recorded-flag" name="answers[{{ $q->id }}]" id="voiceRecordedInput_{{ $q->id }}" value="{{ $hasAudio ? ($existingResp->text_value ?? '1') : '' }}">
-                            </div>
 
                         @else
                             <input type="text" class="form-control q-input" name="answers[{{ $q->id }}]" value="{{ $existingResponses[$q->id]->text_value ?? '' }}">
