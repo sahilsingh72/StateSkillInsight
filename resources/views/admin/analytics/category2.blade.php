@@ -15,29 +15,61 @@
     <div class="col-md-3">
         <div class="card-custom p-3 border-start border-danger border-4">
             <div class="small text-secondary fw-semibold">Interview Conversion Gap</div>
-            <h3 class="fw-bold text-dark mb-0">42.8%</h3>
-            <small class="text-danger">Highest Bottleneck Stage</small>
+            <h3 class="fw-bold text-dark mb-0">
+                @if(isset($metrics['conversion_gap']) && $metrics['conversion_gap'] !== null)
+                    {{ number_format($metrics['conversion_gap'], 1) }}%
+                @else
+                    0.0%
+                @endif
+            </h3>
+            <small class="{{ $metrics['conversion_gap_class'] ?? 'text-muted' }}">
+                <i class="bi {{ $metrics['conversion_gap_icon'] ?? 'bi-clock' }} me-1"></i> {{ $metrics['conversion_gap_status'] ?? 'Awaiting Responses' }}
+            </small>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card-custom p-3 border-start border-warning border-4">
-            <div class="small text-secondary fw-semibold">Practical Experience Gap</div>
-            <h3 class="fw-bold text-dark mb-0">48.2 <small class="fs-6 text-muted">/100</small></h3>
-            <small class="text-warning">Real Project Shortfall</small>
+            <div class="small text-secondary fw-semibold">Career Transition Confidence</div>
+            <h3 class="fw-bold text-dark mb-0">
+                @if(isset($metrics['experience_score']) && $metrics['experience_score'] !== null)
+                    {{ number_format($metrics['experience_score'], 1) }} <small class="fs-6 text-muted">/100</small>
+                @else
+                    0.0 <small class="fs-6 text-muted">/100</small>
+                @endif
+            </h3>
+            <small class="{{ $metrics['experience_class'] ?? 'text-muted' }}">
+                <i class="bi {{ $metrics['experience_icon'] ?? 'bi-clock' }} me-1"></i> {{ $metrics['experience_status'] ?? 'Awaiting Responses' }}
+            </small>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card-custom p-3 border-start border-primary border-4">
             <div class="small text-secondary fw-semibold">Job-Search Resilience</div>
-            <h3 class="fw-bold text-dark mb-0">70.5 <small class="fs-6 text-muted">/100</small></h3>
-            <small class="text-primary">Continuous Learning Agility</small>
+            <h3 class="fw-bold text-dark mb-0">
+                @if(isset($metrics['resilience_score']) && $metrics['resilience_score'] !== null)
+                    {{ number_format($metrics['resilience_score'], 1) }} <small class="fs-6 text-muted">/100</small>
+                @else
+                    0.0 <small class="fs-6 text-muted">/100</small>
+                @endif
+            </h3>
+            <small class="{{ $metrics['resilience_class'] ?? 'text-muted' }}">
+                <i class="bi {{ $metrics['resilience_icon'] ?? 'bi-clock' }} me-1"></i> {{ $metrics['resilience_status'] ?? 'Awaiting Responses' }}
+            </small>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card-custom p-3 border-start border-success border-4">
             <div class="small text-secondary fw-semibold">Self-Directed Employability</div>
-            <h3 class="fw-bold text-dark mb-0">65.0 <small class="fs-6 text-muted">/100</small></h3>
-            <small class="text-success">Online Certification Upskilling</small>
+            <h3 class="fw-bold text-dark mb-0">
+                @if(isset($metrics['employability_score']) && $metrics['employability_score'] !== null)
+                    {{ number_format($metrics['employability_score'], 1) }} <small class="fs-6 text-muted">/100</small>
+                @else
+                    0.0 <small class="fs-6 text-muted">/100</small>
+                @endif
+            </h3>
+            <small class="{{ $metrics['employability_class'] ?? 'text-muted' }}">
+                <i class="bi {{ $metrics['employability_icon'] ?? 'bi-clock' }} me-1"></i> {{ $metrics['employability_status'] ?? 'Awaiting Responses' }}
+            </small>
         </div>
     </div>
 </div>
@@ -56,7 +88,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($respondents as $r)
+                @forelse($respondents as $r)
                     <tr>
                         <td><strong>{{ $r->name }}</strong><br><small class="text-muted">{{ $r->email }}</small></td>
                         <td>{{ $r->programme }}</td>
@@ -64,7 +96,14 @@
                         <td><span class="badge bg-warning text-dark">{{ $r->employment_status }}</span></td>
                         <td><a href="{{ route('admin.respondents.show', $r->id) }}" class="btn btn-sm btn-light border">View Profile</a></td>
                     </tr>
-                @endforeach
+                @empty
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                            No respondents recorded in this category yet.
+                        </td>
+                    </tr>
+                @endforelse
             </tbody>
         </table>
     </div>

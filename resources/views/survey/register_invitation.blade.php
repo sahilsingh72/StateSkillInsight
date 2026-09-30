@@ -1,4 +1,4 @@
-@extends('layouts.survey')
+    @extends('layouts.survey')
 
 @section('title', 'Complete Profile - ' . $category->name)
 
@@ -14,6 +14,50 @@
                 <h4 class="fw-bold text-dark mb-0">{{ $category->name }}</h4>
             </div>
         </div>
+
+        @if(session('resume_data'))
+            <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden" style="background: linear-gradient(135deg, #fffcf0 0%, #fef3c7 100%); border: 2px solid #f59e0b !important;">
+                <div class="card-body p-4">
+                    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                        <div class="d-flex align-items-start gap-3">
+                            <div class="rounded-circle bg-warning text-dark p-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px;">
+                                <i class="bi bi-clock-history fs-4"></i>
+                            </div>
+                            <div>
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <span class="badge bg-warning text-dark fw-bold">Incomplete Survey Found</span>
+                                </div>
+                                <h5 class="fw-bold text-dark mb-1">Welcome back, {{ session('resume_data')['name'] }}!</h5>
+                                <p class="text-secondary small mb-2">
+                                    You already have an unfinished survey registered under <strong>{{ session('resume_data')['email'] }}</strong>.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex-shrink-0 text-md-end mt-2 mt-md-0">
+                            <a href="{{ session('resume_data')['url'] }}" class="btn btn-warning text-dark fw-bold px-4 py-2 rounded-pill shadow-sm d-inline-flex align-items-center gap-2">
+                                <span>Continue to Remaining Survey</span>
+                                <i class="bi bi-arrow-right-circle-fill fs-5"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        @if($errors->any() && !session('resume_data'))
+            <div class="alert alert-danger alert-dismissible fade show rounded-3 mb-4 shadow-sm" role="alert">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <i class="bi bi-exclamation-triangle-fill fs-5 text-danger"></i>
+                    <strong>Unable to Start Survey:</strong>
+                </div>
+                <ul class="mb-0 ps-3 small">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
 
         <form action="{{ route('survey.complete_invitation_profile', ['token' => $invitation->token]) }}" method="POST">
             @csrf

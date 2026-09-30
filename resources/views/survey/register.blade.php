@@ -15,7 +15,39 @@
             </div>
         </div>
 
-        @if($errors->any())
+        @if(session('resume_data'))
+            <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden" style="background: linear-gradient(135deg, #fffcf0 0%, #fef3c7 100%); border: 2px solid #f59e0b !important;">
+                <div class="card-body p-4">
+                    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                        <div class="d-flex align-items-start gap-3">
+                            <div class="rounded-circle bg-warning text-dark p-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px;">
+                                <i class="bi bi-clock-history fs-4"></i>
+                            </div>
+                            <div>
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <span class="badge bg-warning text-dark fw-bold">Incomplete Survey Found</span>
+                                    <span class="badge bg-white text-secondary border">{{ session('resume_data')['category'] }}</span>
+                                </div>
+                                <h5 class="fw-bold text-dark mb-1">Welcome back, {{ session('resume_data')['name'] }}!</h5>
+                                <p class="text-secondary small mb-2">
+                                    You have an incomplete survey registered with <strong>{{ session('resume_data')['email'] }}</strong>.
+                                </p>
+                                @if(isset(session('resume_data')['percentage']))
+                                    <div class="d-flex align-items-center gap-2" style="max-width: 280px;">
+                                        <div class="progress flex-grow-1" style="height: 6px;">
+                                            <div class="progress-bar bg-warning" role="progressbar" style="width: {{ session('resume_data')['percentage'] }}%"></div>
+                                        </div>
+                                        <span class="small text-muted fw-semibold">{{ round(session('resume_data')['percentage']) }}% completed</span>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        @if($errors->any() && !session('resume_data'))
             <div class="alert alert-danger alert-dismissible fade show rounded-3 mb-4 shadow-sm" role="alert">
                 <div class="d-flex align-items-center gap-2 mb-1">
                     <i class="bi bi-exclamation-triangle-fill fs-5 text-danger"></i>
@@ -125,7 +157,16 @@
                     <label class="form-label fw-semibold">Email Address <span class="text-danger">*</span></label>
                     <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" placeholder="name@example.com" value="{{ old('email') }}" required>
                     @error('email')
-                        <div class="invalid-feedback">{{ $message }}</div>
+                        <div class="invalid-feedback d-block">
+                            {{ $message }}
+                            @if(session('resume_data'))
+                                <div class="mt-2">
+                                    <a href="{{ session('resume_data')['url'] }}" class="btn btn-sm btn-warning text-dark fw-bold px-3 py-1 rounded-pill">
+                                        <i class="bi bi-arrow-right-circle-fill me-1"></i> Continue to Remaining Survey
+                                    </a>
+                                </div>
+                            @endif
+                        </div>
                     @enderror
                 </div>
                 <div class="col-md-6">
@@ -166,7 +207,7 @@
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold">Graduation / Admission Year</label>
+                    <label class="form-label fw-semibold">Graduation Year</label>
                     <input type="text" name="graduation_year" class="form-control @error('graduation_year') is-invalid @enderror" placeholder="e.g. 2024" value="{{ old('graduation_year') }}">
                 </div>
                 <div class="col-md-6">

@@ -98,6 +98,7 @@ class PublicSurveyController extends Controller
                 ->whereHas('respondent', function ($q) use ($inputEmail) {
                     $q->whereRaw('LOWER(email) = ?', [$inputEmail]);
                 })
+                ->with(['respondent', 'category', 'currentSection'])
                 ->first();
 
             if ($existingSurvey) {
@@ -106,8 +107,22 @@ class PublicSurveyController extends Controller
                         'email' => "This email address ({$request->email}) has already completed this survey. Duplicate responses with the same email are not permitted."
                     ]);
                 } else {
-                    return back()->withInput()->withErrors([
-                        'email' => "A survey response with this email address ({$request->email}) has already been initiated. Duplicate responses with the same email are not permitted."
+                    $resumeToken = $existingSurvey->respondent->token;
+                    $targetSectionId = $existingSurvey->current_section_id;
+                    $resumeUrl = route('survey.take', array_filter([
+                        'token' => $resumeToken,
+                        'section' => $targetSectionId,
+                    ]));
+
+                    return back()->withInput()->with('resume_data', [
+                        'url' => $resumeUrl,
+                        'name' => $existingSurvey->respondent->name,
+                        'email' => $existingSurvey->respondent->email,
+                        'category' => $existingSurvey->category->name ?? $existingSurvey->category_code,
+                        'percentage' => (float)$existingSurvey->completion_percentage,
+                        'section_title' => $existingSurvey->currentSection?->title ?? 'Remaining Questions',
+                    ])->withErrors([
+                        'email' => "A survey session for {$request->email} is already in progress. Click 'Continue to Remaining Survey' above to resume."
                     ]);
                 }
             }

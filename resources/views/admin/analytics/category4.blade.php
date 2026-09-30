@@ -15,29 +15,61 @@
     <div class="col-md-3">
         <div class="card-custom p-3 border-start border-success border-4">
             <div class="small text-secondary fw-semibold">Re-entry Interest</div>
-            <h3 class="fw-bold text-dark mb-0">72.4%</h3>
-            <small class="text-success"><i class="bi bi-arrow-repeat me-1"></i> High Willingness to Complete</small>
+            <h3 class="fw-bold text-dark mb-0">
+                @if(isset($metrics['reentry_interest']) && $metrics['reentry_interest'] !== null)
+                    {{ number_format($metrics['reentry_interest'], 1) }}%
+                @else
+                    0.0%
+                @endif
+            </h3>
+            <small class="{{ $metrics['reentry_class'] ?? 'text-muted' }}">
+                <i class="bi {{ $metrics['reentry_icon'] ?? 'bi-clock' }} me-1"></i> {{ $metrics['reentry_status'] ?? 'Awaiting Responses' }}
+            </small>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card-custom p-3 border-start border-primary border-4">
             <div class="small text-secondary fw-semibold">Retained Capability Index</div>
-            <h3 class="fw-bold text-dark mb-0">60.0 <small class="fs-6 text-muted">/100</small></h3>
-            <small class="text-primary">Foundational Knowledge Retained</small>
+            <h3 class="fw-bold text-dark mb-0">
+                @if(isset($metrics['retained_capability']) && $metrics['retained_capability'] !== null)
+                    {{ number_format($metrics['retained_capability'], 1) }} <small class="fs-6 text-muted">/100</small>
+                @else
+                    0.0 <small class="fs-6 text-muted">/100</small>
+                @endif
+            </h3>
+            <small class="{{ $metrics['retained_class'] ?? 'text-muted' }}">
+                <i class="bi {{ $metrics['retained_icon'] ?? 'bi-clock' }} me-1"></i> {{ $metrics['retained_status'] ?? 'Awaiting Responses' }}
+            </small>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card-custom p-3 border-start border-warning border-4">
             <div class="small text-secondary fw-semibold">Apprenticeship Readiness</div>
-            <h3 class="fw-bold text-dark mb-0">65.8%</h3>
-            <small class="text-warning">Work-based Skill Preference</small>
+            <h3 class="fw-bold text-dark mb-0">
+                @if(isset($metrics['apprenticeship_readiness']) && $metrics['apprenticeship_readiness'] !== null)
+                    {{ number_format($metrics['apprenticeship_readiness'], 1) }}%
+                @else
+                    0.0%
+                @endif
+            </h3>
+            <small class="{{ $metrics['apprenticeship_class'] ?? 'text-muted' }}">
+                <i class="bi {{ $metrics['apprenticeship_icon'] ?? 'bi-clock' }} me-1"></i> {{ $metrics['apprenticeship_status'] ?? 'Awaiting Responses' }}
+            </small>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card-custom p-3 border-start border-info border-4">
             <div class="small text-secondary fw-semibold">Entrepreneurial Potential</div>
-            <h3 class="fw-bold text-dark mb-0">34.2%</h3>
-            <small class="text-info">Self-Livelihood Interest</small>
+            <h3 class="fw-bold text-dark mb-0">
+                @if(isset($metrics['entrepreneurial_potential']) && $metrics['entrepreneurial_potential'] !== null)
+                    {{ number_format($metrics['entrepreneurial_potential'], 1) }}%
+                @else
+                    0.0%
+                @endif
+            </h3>
+            <small class="{{ $metrics['entrepreneurial_class'] ?? 'text-muted' }}">
+                <i class="bi {{ $metrics['entrepreneurial_icon'] ?? 'bi-clock' }} me-1"></i> {{ $metrics['entrepreneurial_status'] ?? 'Awaiting Responses' }}
+            </small>
         </div>
     </div>
 </div>
@@ -56,7 +88,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($respondents as $r)
+                @forelse($respondents as $r)
                     <tr>
                         <td><strong>{{ $r->name }}</strong><br><small class="text-muted">{{ $r->email }}</small></td>
                         <td>{{ $r->programme }}</td>
@@ -64,7 +96,14 @@
                         <td><span class="badge bg-danger">{{ $r->employment_status }}</span></td>
                         <td><a href="{{ route('admin.respondents.show', $r->id) }}" class="btn btn-sm btn-light border">View Profile</a></td>
                     </tr>
-                @endforeach
+                @empty
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                            No respondents recorded in this category yet.
+                        </td>
+                    </tr>
+                @endforelse
             </tbody>
         </table>
     </div>
