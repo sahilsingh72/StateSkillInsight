@@ -243,6 +243,74 @@
         </form>
     </div>
 </div>
+
+<!-- Instructions Popup Modal (750px width container) -->
+<div class="modal fade" id="surveyInstructionsModal" tabindex="-1" aria-labelledby="surveyInstructionsModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 750px; width: 95%;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <!-- Modal Header -->
+            <div class="modal-header border-bottom px-4 py-3" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-circle p-2 bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;">
+                        <i class="bi bi-info-circle-fill fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0" id="surveyInstructionsModalLabel">Important Survey Instructions</h5>
+                        <small class="text-secondary">Please review these essential guidelines before proceeding to registration</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Body with Guidelines -->
+            <div class="modal-body p-4 bg-white">
+                <div class="d-flex flex-column gap-3">
+                    <div class="p-3 rounded-3 bg-light border d-flex align-items-start gap-3">
+                        <div class="text-primary fs-5 mt-1 flex-shrink-0">
+                            <i class="bi bi-person-check-fill"></i>
+                        </div>
+                        <div class="text-dark fw-semibold" style="font-size: 0.98rem; line-height: 1.6;">
+                            Only one response is allowed per survey.
+                        </div>
+                    </div>
+
+                    <div class="p-3 rounded-3 bg-light border d-flex align-items-start gap-3">
+                        <div class="text-primary fs-5 mt-1 flex-shrink-0">
+                            <i class="bi bi-pencil-square"></i>
+                        </div>
+                        <div class="text-dark fw-semibold" style="font-size: 0.98rem; line-height: 1.6;">
+                            Before submitting the survey, you can review and modify your information as needed.
+                        </div>
+                    </div>
+
+                    <div class="p-3 rounded-3 bg-light border d-flex align-items-start gap-3">
+                        <div class="text-danger fs-5 mt-1 flex-shrink-0">
+                            <i class="bi bi-lock-fill"></i>
+                        </div>
+                        <div class="text-dark fw-semibold" style="font-size: 0.98rem; line-height: 1.6;">
+                            Once the survey is finally submitted, no further modifications will be allowed.
+                        </div>
+                    </div>
+
+                    <div class="p-3 rounded-3 bg-light border d-flex align-items-start gap-3">
+                        <div class="text-warning-emphasis fs-5 mt-1 flex-shrink-0">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                        <div class="text-dark fw-semibold" style="font-size: 0.98rem; line-height: 1.6;">
+                            If required, you may take breaks while completing the survey. However, please ensure that the survey is completed and submitted on the same day.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer with OK button -->
+            <div class="modal-footer border-top bg-light px-4 py-3 justify-content-end">
+                <button type="button" class="btn btn-primary px-5 py-2 fw-bold rounded-pill shadow-sm" data-bs-dismiss="modal">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('styles')
@@ -627,11 +695,23 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // Initialize on page load
+    // Initialize institution on page load
     const initialInstVal = instTomSelect ? instTomSelect.getValue() : (institutionSelect ? institutionSelect.value : '');
     if (initialInstVal) {
         handleInstitutionChange(true);
     }
+
+    @if(!$errors->any() && !session('resume_data') && empty(old('_token')))
+    // Auto-open Instructions Modal ONLY on fresh arrival from landing page
+    const instructionsModalEl = document.getElementById('surveyInstructionsModal');
+    if (instructionsModalEl) {
+        const instructionsModal = new bootstrap.Modal(instructionsModalEl, {
+            backdrop: 'static',
+            keyboard: false
+        });
+        instructionsModal.show();
+    }
+    @endif
 });
 </script>
 @endpush

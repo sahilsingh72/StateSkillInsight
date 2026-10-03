@@ -104,7 +104,7 @@ class PublicSurveyController extends Controller
             if ($existingSurvey) {
                 if ($existingSurvey->status === 'completed') {
                     return back()->withInput()->withErrors([
-                        'email' => "This email address ({$request->email}) has already completed this survey. Duplicate responses with the same email are not permitted."
+                        'email' => "{$request->email} has already completed the survey."
                     ]);
                 } else {
                     $resumeToken = $existingSurvey->respondent->token;
@@ -122,7 +122,7 @@ class PublicSurveyController extends Controller
                         'percentage' => (float)$existingSurvey->completion_percentage,
                         'section_title' => $existingSurvey->currentSection?->title ?? 'Remaining Questions',
                     ])->withErrors([
-                        'email' => "A survey session for {$request->email} is already in progress. Click 'Continue to Remaining Survey' above to resume."
+                        'email' => "An incomplete survey session is found for you ({$request->email}), please click on continue to complete the survey from where you left off."
                     ]);
                 }
             }
