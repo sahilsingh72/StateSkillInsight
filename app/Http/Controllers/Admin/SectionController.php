@@ -26,10 +26,16 @@ class SectionController extends Controller
                 ->orWhere('university_id', $uniId)
                 ->orWhereHas('universities', function ($uq) use ($uniId) {
                     $uq->where('universities.id', $uniId);
+                })
+                ->orWhereHas('questions', function ($subQ) use ($uniId) {
+                    $subQ->where('university_id', $uniId)
+                         ->orWhereHas('universities', function ($uq) use ($uniId) {
+                             $uq->where('universities.id', $uniId);
+                         });
                 });
             });
 
-            // Count questions accessible to this institution (global, directly assigned, or parent section assigned)
+            // Count questions accessible to this institution (global or directly assigned to this university)
             $query->withCount(['questions' => function ($q) use ($uniId) {
                 $q->where(function ($sub) use ($uniId) {
                     $sub->where(function ($gq) {
@@ -38,12 +44,6 @@ class SectionController extends Controller
                     ->orWhere('university_id', $uniId)
                     ->orWhereHas('universities', function ($uq) use ($uniId) {
                         $uq->where('universities.id', $uniId);
-                    })
-                    ->orWhereHas('section', function ($secQ) use ($uniId) {
-                        $secQ->where('university_id', $uniId)
-                             ->orWhereHas('universities', function ($secUQ) use ($uniId) {
-                                 $secUQ->where('universities.id', $uniId);
-                             });
                     });
                 });
             }]);
@@ -57,12 +57,6 @@ class SectionController extends Controller
                     ->orWhere('university_id', $uniId)
                     ->orWhereHas('universities', function ($uq) use ($uniId) {
                         $uq->where('universities.id', $uniId);
-                    })
-                    ->orWhereHas('section', function ($secQ) use ($uniId) {
-                        $secQ->where('university_id', $uniId)
-                             ->orWhereHas('universities', function ($secUQ) use ($uniId) {
-                                 $secUQ->where('universities.id', $uniId);
-                             });
                     });
                 })
                 ->with(['dimension', 'university', 'universities', 'creator', 'section.category'])
@@ -193,26 +187,13 @@ class SectionController extends Controller
 
         if ($scopeType === 'specific' && !empty($selectedIds)) {
             $section->universities()->sync($selectedIds);
-            
-            // Automatically cascade/sync all questions under this section to match the section's university scope
-            $targetUniId = count($selectedIds) === 1 ? $selectedIds[0] : null;
-            foreach ($section->questions as $q) {
-                $q->update(['university_id' => $targetUniId]);
-                $q->universities()->sync($selectedIds);
-            }
         } else {
             $section->universities()->sync([]);
-            
-            // Make questions under global section global as well
-            foreach ($section->questions as $q) {
-                $q->update(['university_id' => null]);
-                $q->universities()->sync([]);
-            }
         }
 
         AuditLog::log('updated_section', 'SurveySection', $section->id);
 
-        return back()->with('success', 'Section and its assigned questions updated successfully!');
+        return back()->with('success', 'Section updated successfully!');
     }
 
     public function destroy(SurveySection $section)
@@ -220,13 +201,26 @@ class SectionController extends Controller
         $user = auth()->user();
 
         if ($user && !$user->isSuperAdmin()) {
-            $section->load('universities');
+            $section->load('universities', 'questions.creator');
             $isMultiUni = $section->universities->count() > 1;
             $isGlobal = is_null($section->university_id) && $section->universities->isEmpty();
             $isExclusiveToUser = $section->university_id === $user->university_id && $section->universities->count() <= 1;
 
             if ($isGlobal || $isMultiUni || !$isExclusiveToUser) {
                 abort(403, 'Unauthorized. This section is shared across multiple institutions or global, so it can only be modified by Super Administrators.');
+            }
+
+            // Check if section contains any questions created by Super Admin
+            $hasSuperAdminQuestions = $section->questions()->where(function ($q) {
+                $q->whereNull('created_by')
+                  ->orWhere('created_by', 1)
+                  ->orWhereHas('creator', function ($cu) {
+                      $cu->where('role_id', 1);
+                  });
+            })->exists();
+
+            if ($hasSuperAdminQuestions) {
+                return back()->with('error', 'Cannot delete this section because it contains questions configured by System Administrators.');
             }
         }
 

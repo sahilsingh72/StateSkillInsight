@@ -6,7 +6,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h4 class="fw-bold text-dark mb-1">Higher Education Institutions & Colleges Directory</h4>
-        <p class="text-secondary small mb-0">Enroll and manage IITs/NITs, Central/State Universities, Autonomous Colleges, Affiliated Colleges, and Polytechnics/ITIs.</p>
+        <p class="text-secondary small mb-0">Enroll and manage IITs/NITs, Central/State Universities, Affiliated Colleges, and Polytechnics/ITIs.</p>
     </div>
     <div class="d-flex gap-2">
         <button class="btn btn-primary-custom btn-sm" data-bs-toggle="modal" data-bs-target="#newInstitutionModal" onclick="prepareEnrollModal('university')">
@@ -39,7 +39,6 @@
                     <option value="">All Classification Types</option>
                     <option value="ini" {{ request('type') === 'ini' ? 'selected' : '' }}>IIT / NIT / IIM / AIIMS (INI)</option>
                     <option value="university" {{ request('type') === 'university' ? 'selected' : '' }}>Central / State University</option>
-                    <option value="autonomous_college" {{ request('type') === 'autonomous_college' ? 'selected' : '' }}>Autonomous College</option>
                     <option value="affiliated_college" {{ request('type') === 'affiliated_college' ? 'selected' : '' }}>Affiliated College</option>
                     <option value="polytechnic_iti" {{ request('type') === 'polytechnic_iti' ? 'selected' : '' }}>Polytechnic & ITI</option>
                 </select>
@@ -124,8 +123,6 @@
                                 <span class="badge bg-danger text-white border"><i class="bi bi-award-fill me-1"></i> IIT / NIT / IIM (INI)</span>
                             @elseif($inst->type === 'university')
                                 <span class="badge bg-primary-subtle text-primary border"><i class="bi bi-bank me-1"></i> CENTRAL / STATE UNIVERSITY</span>
-                            @elseif($inst->type === 'autonomous_college')
-                                <span class="badge bg-purple-subtle text-purple border" style="background:#f3e8ff; color:#7e22ce;"><i class="bi bi-shield-check me-1"></i> AUTONOMOUS COLLEGE</span>
                             @elseif($inst->type === 'polytechnic_iti')
                                 <span class="badge bg-success-subtle text-success border"><i class="bi bi-tools me-1"></i> POLYTECHNIC & ITI</span>
                             @else
@@ -235,7 +232,6 @@
                             <select name="type" id="institution_type_select" class="form-select border-primary" required onchange="onTypeChange(this.value)">
                                 <option value="ini">Institute of National Importance (IIT / NIT / IIM / AIIMS)</option>
                                 <option value="university" selected>Central / State University</option>
-                                <option value="autonomous_college">Autonomous College (Independent Academic Autonomy)</option>
                                 <option value="affiliated_college">Affiliated College (Works Under Affiliating University)</option>
                                 <option value="polytechnic_iti">Polytechnic & ITI (Technical / Vocational Skill Institute)</option>
                             </select>
@@ -315,11 +311,10 @@
                             <ul class="mb-2 ps-3">
                                 <li>Upload a <code>.xlsx</code> file containing the list of institutes to enroll in bulk.</li>
                                 <li>Required columns: <strong>Name</strong>, <strong>Short Name</strong>.</li>
-                                <li>In the <code>Type</code> column, choose any of the 5 exact classification options:
+                                <li>In the <code>Type</code> column, choose any of the 4 exact classification options:
                                     <ol class="mt-1 mb-1 ps-3">
                                         <li><code>Institute of National Importance (IIT / NIT / IIM / AIIMS)</code></li>
                                         <li><code>Central / State University</code></li>
-                                        <li><code>Autonomous College (Independent Academic Autonomy)</code></li>
                                         <li><code>Affiliated College (Works Under Affiliating University)</code></li>
                                         <li><code>Polytechnic & ITI (Technical / Skill Institute)</code></li>
                                     </ol>
@@ -570,8 +565,6 @@ function onTypeChange(type) {
             infoText.innerText = "Institutes of National Importance (IIT / NIT / IIM / AIIMS) are premier apex autonomous institutes established by Parliament.";
         } else if (type === 'university') {
             infoText.innerText = "Central & State Universities grant academic degrees and manage constituent/affiliated colleges working under them.";
-        } else if (type === 'autonomous_college') {
-            infoText.innerText = "Autonomous Colleges have academic independence to design syllabus and conduct exams independently.";
         } else if (type === 'polytechnic_iti') {
             infoText.innerText = "Polytechnic & ITI institutes offer technical diploma and practical vocational skill training.";
         }

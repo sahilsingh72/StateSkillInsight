@@ -49,18 +49,27 @@ class Question extends Model
             return true;
         }
 
-        // If the question was created by a Superadmin, non-superadmins CANNOT edit or delete it
-        if ($this->creator && $this->creator->isSuperAdmin()) {
+        // If the question has no creator or was created by Super Admin (User 1 or super_admin role), non-superadmins CANNOT edit or delete it
+        if (is_null($this->created_by) || $this->created_by == 1) {
             return false;
         }
 
-        // If question is global (no specific university_id or created_by is null/superadmin), non-superadmins CANNOT edit or delete it
-        if (is_null($this->created_by) || is_null($this->university_id)) {
+        $creator = $this->creator ?? User::find($this->created_by);
+        if (!$creator || $creator->role_id == 1 || $creator->isSuperAdmin()) {
             return false;
         }
 
-        // If created by someone from another university, non-superadmins CANNOT edit or delete it
-        if ($this->university_id !== $user->university_id && (!$this->creator || $this->creator->university_id !== $user->university_id)) {
+        // If question is global (no specific university_id), non-superadmins CANNOT edit or delete it
+        if (is_null($this->university_id) && (!isset($this->universities) || $this->universities->isEmpty())) {
+            return false;
+        }
+
+        // Non-superadmins can ONLY edit questions if created by a user belonging to their own university
+        if ($creator->university_id !== $user->university_id) {
+            return false;
+        }
+
+        if ($this->university_id !== $user->university_id) {
             return false;
         }
 

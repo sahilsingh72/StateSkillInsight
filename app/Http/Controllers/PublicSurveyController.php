@@ -158,7 +158,7 @@ class PublicSurveyController extends Controller
             'consent_at' => now(),
         ]);
 
-        $firstSection = $category->sections()->orderBy('order')->first();
+        $firstSection = $this->getSectionsForRespondent($category, $respondent->university_id)->first();
 
         $respondentSurvey = RespondentSurvey::create([
             'respondent_id' => $respondent->id,
@@ -292,7 +292,7 @@ class PublicSurveyController extends Controller
             'consent_at' => now(),
         ]);
 
-        $firstSection = $category->sections()->orderBy('order')->first();
+        $firstSection = $this->getSectionsForRespondent($category, $respondent->university_id)->first();
 
         RespondentSurvey::create([
             'respondent_id' => $respondent->id,
@@ -323,35 +323,7 @@ class PublicSurveyController extends Controller
         $uniId = $respondent->university_id;
 
         // Fetch sections & questions assigned to respondent's university or common/global questions
-        $sections = $category->sections()
-            ->where(function ($q) use ($uniId) {
-                $q->where(function ($gq) {
-                    $gq->whereNull('university_id')->whereDoesntHave('universities');
-                })
-                ->orWhere('university_id', $uniId)
-                ->orWhereHas('universities', function ($uq) use ($uniId) {
-                    $uq->where('universities.id', $uniId);
-                });
-            })
-            ->with(['questions' => function ($q) use ($uniId) {
-                $q->where(function ($sub) use ($uniId) {
-                    $sub->where(function ($gq) {
-                        $gq->whereNull('university_id')->whereDoesntHave('universities');
-                    })
-                    ->orWhere('university_id', $uniId)
-                    ->orWhereHas('universities', function ($uq) use ($uniId) {
-                        $uq->where('universities.id', $uniId);
-                    })
-                    ->orWhereHas('section', function ($secQ) use ($uniId) {
-                        $secQ->where('university_id', $uniId)
-                             ->orWhereHas('universities', function ($secUQ) use ($uniId) {
-                                 $secUQ->where('universities.id', $uniId);
-                             });
-                    });
-                })->where('is_active', true)->orderBy('order');
-            }, 'questions.options', 'questions.conditions', 'questions.translations'])
-            ->orderBy('order')
-            ->get();
+        $sections = $this->getSectionsForRespondent($category, $uniId);
 
         $university = $respondent->university ?? $survey->university;
 
@@ -424,7 +396,8 @@ class PublicSurveyController extends Controller
         }
 
         // Update progress
-        $totalQuestions = $respondentSurvey->category->questions()->count();
+        $sections = $this->getSectionsForRespondent($respondentSurvey->category, $respondent->university_id);
+        $totalQuestions = $sections->pluck('questions')->flatten()->count();
         $answeredCount = Response::where('respondent_survey_id', $respondentSurvey->id)->count();
         $percentage = ($totalQuestions > 0) ? min(100, round(($answeredCount / $totalQuestions) * 100, 1)) : 0;
 
@@ -454,35 +427,7 @@ class PublicSurveyController extends Controller
         $uniId = $respondent->university_id;
         $university = $respondent->university ?? $survey->university;
 
-        $sections = $category->sections()
-            ->where(function ($q) use ($uniId) {
-                $q->where(function ($gq) {
-                    $gq->whereNull('university_id')->whereDoesntHave('universities');
-                })
-                ->orWhere('university_id', $uniId)
-                ->orWhereHas('universities', function ($uq) use ($uniId) {
-                    $uq->where('universities.id', $uniId);
-                });
-            })
-            ->with(['questions' => function ($q) use ($uniId) {
-                $q->where(function ($sub) use ($uniId) {
-                    $sub->where(function ($gq) {
-                        $gq->whereNull('university_id')->whereDoesntHave('universities');
-                    })
-                    ->orWhere('university_id', $uniId)
-                    ->orWhereHas('universities', function ($uq) use ($uniId) {
-                        $uq->where('universities.id', $uniId);
-                    })
-                    ->orWhereHas('section', function ($secQ) use ($uniId) {
-                        $secQ->where('university_id', $uniId)
-                             ->orWhereHas('universities', function ($secUQ) use ($uniId) {
-                                 $secUQ->where('universities.id', $uniId);
-                             });
-                    });
-                })->where('is_active', true)->orderBy('order');
-            }, 'questions.options'])
-            ->orderBy('order')
-            ->get();
+        $sections = $this->getSectionsForRespondent($category, $uniId);
 
         $responses = Response::where('respondent_survey_id', $respondentSurvey->id)->get()->keyBy('question_id');
 
@@ -500,34 +445,7 @@ class PublicSurveyController extends Controller
 
         // Verify all required questions have answers
         $category = $respondentSurvey->category;
-        $sections = $category->sections()
-            ->where(function ($q) use ($uniId) {
-                $q->where(function ($gq) {
-                    $gq->whereNull('university_id')->whereDoesntHave('universities');
-                })
-                ->orWhere('university_id', $uniId)
-                ->orWhereHas('universities', function ($uq) use ($uniId) {
-                    $uq->where('universities.id', $uniId);
-                });
-            })
-            ->with(['questions' => function ($q) use ($uniId) {
-                $q->where(function ($sub) use ($uniId) {
-                    $sub->where(function ($gq) {
-                        $gq->whereNull('university_id')->whereDoesntHave('universities');
-                    })
-                    ->orWhere('university_id', $uniId)
-                    ->orWhereHas('universities', function ($uq) use ($uniId) {
-                        $uq->where('universities.id', $uniId);
-                    })
-                    ->orWhereHas('section', function ($secQ) use ($uniId) {
-                        $secQ->where('university_id', $uniId)
-                             ->orWhereHas('universities', function ($secUQ) use ($uniId) {
-                                 $secUQ->where('universities.id', $uniId);
-                             });
-                    });
-                })->where('is_active', true)->where('is_required', true);
-            }])
-            ->get();
+        $sections = $this->getSectionsForRespondent($category, $uniId, true);
 
         $requiredQuestions = $sections->pluck('questions')->flatten();
         $responses = Response::where('respondent_survey_id', $respondentSurvey->id)->get()->keyBy('question_id');
@@ -630,5 +548,69 @@ class PublicSurveyController extends Controller
             'university_name' => $university->name,
             'colleges' => $colleges,
         ]);
+    }
+
+    /**
+     * Get all applicable sections and questions for a respondent based on their university.
+     */
+    private function getSectionsForRespondent($category, ?int $uniId, bool $requiredOnly = false)
+    {
+        if (!$category) {
+            return collect();
+        }
+
+        return $category->sections()
+            ->where(function ($q) use ($uniId) {
+                // 1. Common / Global section
+                $q->where(function ($gq) {
+                    $gq->whereNull('university_id')->whereDoesntHave('universities');
+                });
+
+                // 2. Section explicitly assigned to this university
+                if ($uniId) {
+                    $q->orWhere('university_id', $uniId)
+                      ->orWhereHas('universities', function ($uq) use ($uniId) {
+                          $uq->where('universities.id', $uniId);
+                      });
+                }
+
+                // 3. Section contains at least one active question assigned to this university
+                if ($uniId) {
+                    $q->orWhereHas('questions', function ($subQ) use ($uniId) {
+                        $subQ->where('is_active', true)
+                            ->where(function ($qScope) use ($uniId) {
+                                $qScope->where('university_id', $uniId)
+                                       ->orWhereHas('universities', function ($uq) use ($uniId) {
+                                           $uq->where('universities.id', $uniId);
+                                       });
+                            });
+                    });
+                }
+            })
+            ->with(['questions' => function ($q) use ($uniId, $requiredOnly) {
+                $q->where(function ($sub) use ($uniId) {
+                    $sub->where(function ($gq) {
+                        $gq->whereNull('university_id')->whereDoesntHave('universities');
+                    });
+                    if ($uniId) {
+                        $sub->orWhere('university_id', $uniId)
+                            ->orWhereHas('universities', function ($uq) use ($uniId) {
+                                $uq->where('universities.id', $uniId);
+                            });
+                    }
+                })->where('is_active', true);
+
+                if ($requiredOnly) {
+                    $q->where('is_required', true);
+                }
+
+                $q->orderBy('order');
+            }, 'questions.options', 'questions.conditions', 'questions.translations'])
+            ->orderBy('order')
+            ->get()
+            ->filter(function ($sec) {
+                return $sec->questions->isNotEmpty();
+            })
+            ->values();
     }
 }

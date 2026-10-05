@@ -99,19 +99,6 @@
                             </optgroup>
                         @endif
 
-                        @php $autonomies = $institutions->where('type', 'autonomous_college'); @endphp
-                        @if($autonomies->count() > 0)
-                            <optgroup label="Autonomous Colleges">
-                                @foreach($autonomies as $inst)
-                                    <option value="{{ $inst->id }}" 
-                                            data-has-colleges="0"
-                                            {{ old('institution_id', old('university_id')) == $inst->id ? 'selected' : '' }}>
-                                        {{ $inst->name }} (Autonomous)
-                                    </option>
-                                @endforeach
-                            </optgroup>
-                        @endif
-
                         @php $polytechnics = $institutions->where('type', 'polytechnic_iti'); @endphp
                         @if($polytechnics->count() > 0)
                             <optgroup label="Polytechnics & ITIs (Skill & Technical Institutes)">

@@ -240,36 +240,18 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                @php
-                                                    $isSuperAdminModal = auth()->check() && auth()->user()->isSuperAdmin();
-                                                    $userUniModal = auth()->user()?->university;
-                                                    $isGlobalQ = is_null($q->university_id) && (!isset($q->universities) || $q->universities->isEmpty());
-                                                @endphp
-
-                                                @if($isSuperAdminModal)
-                                                    @if($q->university_id && $q->university)
-                                                        <span class="badge bg-primary-subtle text-primary border" title="Specific to {{ $q->university->name }}">
-                                                            <i class="bi bi-building me-1"></i> {{ $q->university->short_name }}
-                                                        </span>
-                                                    @elseif(isset($q->universities) && $q->universities->isNotEmpty())
-                                                        <span class="badge bg-info-subtle text-info border" title="{{ $q->universities->pluck('name')->implode(', ') }}">
-                                                            <i class="bi bi-building me-1"></i> {{ $q->universities->count() }} Institutions
-                                                        </span>
-                                                    @else
-                                                        <span class="badge bg-secondary-subtle text-secondary border">
-                                                            <i class="bi bi-globe me-1"></i> Common (All)
-                                                        </span>
-                                                    @endif
+                                                @if($q->university_id && $q->university)
+                                                    <span class="badge bg-primary-subtle text-primary border" title="Specific to {{ $q->university->name }}">
+                                                        <i class="bi bi-building me-1"></i> {{ $q->university->short_name }}
+                                                    </span>
+                                                @elseif(isset($q->universities) && $q->universities->isNotEmpty())
+                                                    <span class="badge bg-info-subtle text-info border" title="{{ $q->universities->pluck('name')->implode(', ') }}">
+                                                        <i class="bi bi-building me-1"></i> {{ $q->universities->pluck('short_name')->implode(', ') }}
+                                                    </span>
                                                 @else
-                                                    @if($isGlobalQ)
-                                                        <span class="badge bg-secondary-subtle text-secondary border">
-                                                            <i class="bi bi-globe me-1"></i> Common (All)
-                                                        </span>
-                                                    @else
-                                                        <span class="badge bg-primary-subtle text-primary border" title="{{ $userUniModal->name ?? 'Your Institution' }}">
-                                                            <i class="bi bi-building me-1"></i> {{ $userUniModal->short_name ?? 'Your Institution' }}
-                                                        </span>
-                                                    @endif
+                                                    <span class="badge bg-secondary-subtle text-secondary border">
+                                                        <i class="bi bi-globe me-1"></i> Common (All)
+                                                    </span>
                                                 @endif
                                             </td>
                                             <td><span class="badge bg-info-subtle text-info border">{{ strtoupper($q->type) }}</span></td>
@@ -282,24 +264,42 @@
                                             </td>
                                             <td class="text-end pe-3">
                                                 @if($q->canBeEditedBy(auth()->user()))
-                                                    <div class="btn-group btn-group-sm">
-                                                        <a href="{{ route('admin.questions.edit', ['question' => $q->id, 'return_to' => 'section_modal', 'section_id' => $sec->id]) }}" class="btn btn-light border" title="Edit Question">
-                                                            <i class="bi bi-pencil text-primary"></i>
-                                                        </a>
-                                                        <form action="{{ route('admin.questions.destroy', $q->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this question?');">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <input type="hidden" name="return_to" value="section_modal">
-                                                            <input type="hidden" name="section_id" value="{{ $sec->id }}">
-                                                            <button type="submit" class="btn btn-light border text-danger" title="Delete Question">
-                                                                <i class="bi bi-trash"></i>
-                                                            </button>
-                                                        </form>
+                                                    <div class="d-inline-flex align-items-center gap-2">
+                                                        <!-- Enable / Disable Switch -->
+                                                        <div class="form-check form-switch m-0" title="{{ $q->is_active ? 'Active (Click to Disable)' : 'Disabled (Click to Enable)' }}">
+                                                            <input class="form-check-input question-toggle-btn" 
+                                                                   type="checkbox" 
+                                                                   role="switch"
+                                                                   id="q_modal_toggle_{{ $q->id }}"
+                                                                   data-id="{{ $q->id }}"
+                                                                   data-url="{{ route('admin.questions.toggle_status', $q->id) }}"
+                                                                   {{ $q->is_active ? 'checked' : '' }}
+                                                                   style="cursor: pointer; width: 2.2em; height: 1.15em;">
+                                                        </div>
+                                                        <div class="btn-group btn-group-sm">
+                                                            <a href="{{ route('admin.questions.edit', ['question' => $q->id, 'return_to' => 'section_modal', 'section_id' => $sec->id]) }}" class="btn btn-light border" title="Edit Question">
+                                                                <i class="bi bi-pencil text-primary"></i>
+                                                            </a>
+                                                            <form action="{{ route('admin.questions.destroy', $q->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this question?');">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <input type="hidden" name="return_to" value="section_modal">
+                                                                <input type="hidden" name="section_id" value="{{ $sec->id }}">
+                                                                <button type="submit" class="btn btn-light border text-danger" title="Delete Question">
+                                                                    <i class="bi bi-trash"></i>
+                                                                </button>
+                                                            </form>
+                                                        </div>
                                                     </div>
                                                 @else
-                                                    <span class="badge bg-light text-secondary border py-1 px-2" title="Superadmin / Global Question (Read-Only)">
-                                                        <i class="bi bi-lock-fill me-1 text-warning"></i> Read-Only
-                                                    </span>
+                                                    <div class="d-inline-flex align-items-center gap-2">
+                                                        <span class="badge {{ $q->is_active ? 'bg-success-subtle text-success border-success' : 'bg-secondary-subtle text-secondary' }} border py-1 px-2" style="font-size: 0.72rem;">
+                                                            <i class="bi {{ $q->is_active ? 'bi-check-circle-fill' : 'bi-dash-circle' }} me-1"></i> {{ $q->is_active ? 'Active' : 'Disabled' }}
+                                                        </span>
+                                                        <span class="badge bg-light text-secondary border py-1 px-2" title="Superadmin / Global Question (Read-Only)">
+                                                            <i class="bi bi-lock-fill me-1 text-warning"></i> Read-Only
+                                                        </span>
+                                                    </div>
                                                 @endif
                                             </td>
                                         </tr>
@@ -517,6 +517,40 @@
                 myModal.show();
             }
         @endif
+
+        document.querySelectorAll('.question-toggle-btn').forEach(function(toggle) {
+            toggle.addEventListener('change', function() {
+                const isChecked = this.checked;
+                const url = this.dataset.url;
+                const toggleEl = this;
+                
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(res => {
+                    if (!res.ok) throw new Error('Network response was not ok');
+                    return res.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        toggleEl.checked = data.is_active;
+                        toggleEl.closest('.form-switch').title = data.is_active ? 'Active (Click to Disable)' : 'Disabled (Click to Enable)';
+                    } else {
+                        toggleEl.checked = !isChecked;
+                        alert(data.message || 'Could not update status');
+                    }
+                })
+                .catch(err => {
+                    toggleEl.checked = !isChecked;
+                    alert('An error occurred while updating question status.');
+                });
+            });
+        });
     });
 </script>
 @endpush
