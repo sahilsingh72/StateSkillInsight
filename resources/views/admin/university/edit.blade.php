@@ -37,7 +37,6 @@
                     <select name="type" id="edit_type_select" class="form-select border-primary" required onchange="toggleParentUniEdit(this.value)">
                         <option value="ini" {{ old('type', $university->type) === 'ini' ? 'selected' : '' }}>Institute of National Importance (IIT / NIT / IIM / AIIMS)</option>
                         <option value="university" {{ old('type', $university->type) === 'university' ? 'selected' : '' }}>Central / State University</option>
-                        <option value="autonomous_college" {{ old('type', $university->type) === 'autonomous_college' ? 'selected' : '' }}>Autonomous College (Independent Academic Autonomy)</option>
                         <option value="affiliated_college" {{ old('type', $university->type) === 'affiliated_college' ? 'selected' : '' }}>Affiliated College (Works Under Parent University)</option>
                         <option value="polytechnic_iti" {{ old('type', $university->type) === 'polytechnic_iti' ? 'selected' : '' }}>Polytechnic & ITI (Technical / Skill Institute)</option>
                     </select>

@@ -61,6 +61,29 @@
         0% { opacity: 0.3; transform: scale(0.85); }
         100% { opacity: 1; transform: scale(1.25); }
     }
+
+    /* Light Yellow Auto-Saved Blinking Badge */
+    .autosave-badge-pulse {
+        background-color: #fef9c3 !important;
+        color: #854d0e !important;
+        border: 1px solid #fde047 !important;
+        font-weight: 600;
+        animation: autoSaveBlink 1.6s infinite ease-in-out;
+        transition: all 0.3s ease;
+    }
+
+    @keyframes autoSaveBlink {
+        0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.4);
+        }
+        50% {
+            opacity: 0.45;
+            transform: scale(0.97);
+            box-shadow: 0 0 8px 2px rgba(234, 179, 8, 0.3);
+        }
+    }
 </style>
 @endpush
 
@@ -92,14 +115,14 @@
                 <span class="text-secondary small" id="currentSectionTitle">Section: {{ $currentSection->title }}</span>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-light text-success border" id="autoSaveBadge">
+                <span class="badge autosave-badge-pulse" id="autoSaveBadge">
                     <i class="bi bi-cloud-check me-1"></i> Auto-saved
                 </span>
                 <span class="fw-bold text-dark" id="progressPercentageText">{{ $respondentSurvey->completion_percentage }}%</span>
             </div>
         </div>
         <div class="progress" style="height: 10px; border-radius: 5px;">
-            <div class="progress-bar bg-primary progress-bar-striped progress-bar-animated" id="progressBar" style="width: {{ $respondentSurvey->completion_percentage }}%;"></div>
+            <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" id="progressBar" style="width: {{ $respondentSurvey->completion_percentage }}%;"></div>
         </div>
     </div>
 
@@ -444,7 +467,7 @@
     function triggerAutoSave() {
         const badge = document.getElementById('autoSaveBadge');
         if (!badge) return;
-        badge.className = 'badge bg-warning text-dark border';
+        badge.className = 'badge autosave-badge-pulse';
         badge.innerHTML = '<i class="bi bi-cloud-arrow-up me-1"></i> Saving...';
 
         const form = document.getElementById('questionnaireForm');
@@ -460,8 +483,8 @@
         .then(res => res.json())
         .then(data => {
             if(data.success) {
-                badge.className = 'badge bg-light text-success border';
-                badge.innerHTML = `<i class="bi bi-cloud-check me-1"></i> Saved ${data.last_saved}`;
+                badge.className = 'badge autosave-badge-pulse';
+                badge.innerHTML = `<i class="bi bi-cloud-check me-1"></i> Auto-saved`;
                 document.getElementById('progressBar').style.width = data.completion_percentage + '%';
                 document.getElementById('progressPercentageText').innerText = data.completion_percentage + '%';
             }

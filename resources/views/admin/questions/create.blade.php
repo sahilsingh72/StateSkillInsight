@@ -118,12 +118,25 @@
                 </div>
             </div>
 
-            <div class="form-check form-switch mb-4 p-3 bg-light rounded-3 border">
-                <input class="form-check-input ms-0 me-2" type="checkbox" name="is_required" id="is_required_toggle" value="1" {{ old('is_required', '1') ? 'checked' : '' }}>
-                <label class="form-check-label fw-semibold text-dark" for="is_required_toggle">
-                    Must to answer <span class="badge bg-danger ms-1">Required</span>
-                </label>
-                <small class="text-muted d-block mt-1">If enabled, respondents must answer this question before proceeding or submitting.</small>
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="form-check form-switch p-3 bg-light rounded-3 border h-100">
+                        <input class="form-check-input ms-0 me-2" type="checkbox" name="is_required" id="is_required_toggle" value="1" {{ old('is_required', '1') ? 'checked' : '' }}>
+                        <label class="form-check-label fw-semibold text-dark" for="is_required_toggle">
+                            Must to answer <span class="badge bg-danger ms-1">Required</span>
+                        </label>
+                        <small class="text-muted d-block mt-1">If enabled, respondents must answer this question before submitting.</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-check form-switch p-3 bg-light rounded-3 border h-100">
+                        <input class="form-check-input ms-0 me-2" type="checkbox" name="is_active" id="is_active_toggle" value="1" {{ old('is_active', '1') ? 'checked' : '' }}>
+                        <label class="form-check-label fw-semibold text-dark" for="is_active_toggle">
+                            Status <span class="badge bg-success ms-1">Active / Enabled</span>
+                        </label>
+                        <small class="text-muted d-block mt-1">If disabled, this question will be hidden from respondents in surveys.</small>
+                    </div>
+                </div>
             </div>
 
             <div class="mb-4">

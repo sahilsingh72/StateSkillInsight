@@ -86,15 +86,6 @@
                             </optgroup>
                         @endif
 
-                        @php $autonomies = $institutions->where('type', 'autonomous_college'); @endphp
-                        @if($autonomies->count() > 0)
-                            <optgroup label="Autonomous Colleges">
-                                @foreach($autonomies as $inst)
-                                    <option value="{{ $inst->id }}" {{ ($selectedUniId == $inst->id) ? 'selected' : '' }}>{{ $inst->name }} (Autonomous)</option>
-                                @endforeach
-                            </optgroup>
-                        @endif
-
                         @php $affiliateds = $institutions->where('type', 'affiliated_college'); @endphp
                         @if($affiliateds->count() > 0)
                             <optgroup label="Affiliated Colleges (Under Parent University)">

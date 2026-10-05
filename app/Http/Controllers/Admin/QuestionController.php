@@ -30,12 +30,6 @@ class QuestionController extends Controller
                 ->orWhere('university_id', $uniId)
                 ->orWhereHas('universities', function ($uq) use ($uniId) {
                     $uq->where('universities.id', $uniId);
-                })
-                ->orWhereHas('section', function ($secQ) use ($uniId) {
-                    $secQ->where('university_id', $uniId)
-                         ->orWhereHas('universities', function ($secUQ) use ($uniId) {
-                             $secUQ->where('universities.id', $uniId);
-                         });
                 });
             });
         } elseif ($request->filled('university_id')) {
@@ -126,6 +120,7 @@ class QuestionController extends Controller
             'help_text' => 'nullable|string',
             'type' => 'required|string',
             'is_required' => 'nullable|boolean',
+            'is_active' => 'nullable|boolean',
             'dimension_id' => 'nullable|exists:psychometric_dimensions,id',
             'scope_type' => 'nullable|in:global,specific',
             'university_ids' => 'nullable|array',
@@ -149,6 +144,7 @@ class QuestionController extends Controller
         }
 
         $validated['is_required'] = $request->boolean('is_required');
+        $validated['is_active'] = $request->has('is_active') ? $request->boolean('is_active') : true;
         $validated['created_by'] = auth()->id();
 
         $question = Question::create($validated);
@@ -157,22 +153,6 @@ class QuestionController extends Controller
             $question->universities()->sync($selectedIds);
         } else {
             $question->universities()->sync([]);
-        }
-
-        if ($section = SurveySection::find($validated['section_id'])) {
-            if ($scopeType === 'global' || empty($selectedIds)) {
-                $section->update(['university_id' => null]);
-                $section->universities()->sync([]);
-            } else {
-                if ($section->university_id !== null && count($selectedIds) === 1) {
-                    $section->update(['university_id' => $selectedIds[0]]);
-                } else {
-                    $section->update(['university_id' => null]);
-                }
-                $existingSecUniIds = $section->universities()->pluck('universities.id')->toArray();
-                $mergedUniIds = array_unique(array_merge($existingSecUniIds, $selectedIds));
-                $section->universities()->sync($mergedUniIds);
-            }
         }
 
         $rawOptions = $request->input('options_text') ?? $request->input('options', []);
@@ -248,6 +228,7 @@ class QuestionController extends Controller
             'help_text' => 'nullable|string',
             'type' => 'required|string',
             'is_required' => 'nullable|boolean',
+            'is_active' => 'nullable|boolean',
             'dimension_id' => 'nullable|exists:psychometric_dimensions,id',
             'scope_type' => 'nullable|in:global,specific',
             'university_ids' => 'nullable|array',
@@ -271,6 +252,9 @@ class QuestionController extends Controller
         }
 
         $validated['is_required'] = $request->boolean('is_required');
+        if ($request->has('is_active')) {
+            $validated['is_active'] = $request->boolean('is_active');
+        }
 
         $question->update($validated);
 
@@ -278,22 +262,6 @@ class QuestionController extends Controller
             $question->universities()->sync($selectedIds);
         } else {
             $question->universities()->sync([]);
-        }
-
-        if ($section = SurveySection::find($validated['section_id'])) {
-            if ($scopeType === 'global' || empty($selectedIds)) {
-                $section->update(['university_id' => null]);
-                $section->universities()->sync([]);
-            } else {
-                if ($section->university_id !== null && count($selectedIds) === 1) {
-                    $section->update(['university_id' => $selectedIds[0]]);
-                } else {
-                    $section->update(['university_id' => null]);
-                }
-                $existingSecUniIds = $section->universities()->pluck('universities.id')->toArray();
-                $mergedUniIds = array_unique(array_merge($existingSecUniIds, $selectedIds));
-                $section->universities()->sync($mergedUniIds);
-            }
         }
 
         if ($request->has('options') || $request->has('options_text')) {
@@ -350,5 +318,31 @@ class QuestionController extends Controller
         }
 
         return redirect()->route('admin.questions.index')->with('success', 'Question deleted successfully!');
+    }
+
+    public function toggleStatus(Request $request, Question $question)
+    {
+        $user = auth()->user();
+        if (!$question->canBeEditedBy($user)) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized action.'], 403);
+            }
+            abort(403, 'Unauthorized to modify this question.');
+        }
+
+        $question->is_active = !$question->is_active;
+        $question->save();
+
+        AuditLog::log('toggled_question_status', 'Question', $question->id);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'is_active' => (bool)$question->is_active,
+                'message' => 'Question status ' . ($question->is_active ? 'enabled' : 'disabled') . ' successfully.'
+            ]);
+        }
+
+        return back()->with('success', 'Question ' . ($question->is_active ? 'enabled' : 'disabled') . ' successfully!');
     }
 }

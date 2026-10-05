@@ -79,6 +79,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
         Route::put('/questions/{question}', [QuestionController::class, 'update'])->name('questions.update');
         Route::delete('/questions/{question}', [QuestionController::class, 'destroy'])->name('questions.destroy');
+        Route::post('/questions/{question}/toggle-status', [QuestionController::class, 'toggleStatus'])->name('questions.toggle_status');
 
         // Respondents
         Route::get('/respondents', [RespondentController::class, 'index'])->name('respondents.index');

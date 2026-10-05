@@ -53,12 +53,12 @@ class UniversitySeeder extends Seeder
             ]
         );
 
-        // Autonomous College (Standalone)
+        // Affiliated College
         University::firstOrCreate(
             ['short_name' => 'SXAC'],
             [
                 'name' => 'St. Xavier Autonomous College of Science & Commerce',
-                'type' => 'autonomous_college',
+                'type' => 'affiliated_college',
                 'parent_id' => null,
                 'tagline' => 'Independent Autonomous Higher Education Institution',
                 'website' => 'https://www.xavierautonomous.edu',

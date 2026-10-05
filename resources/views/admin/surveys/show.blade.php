@@ -197,12 +197,26 @@
                                                                             <span class="badge bg-secondary-subtle text-secondary small ms-1">{{ $q->type }}</span>
                                                                         </div>
                                                                     </div>
-                                                                    <div class="d-flex gap-1">
+                                                                    <div class="d-flex align-items-center gap-2">
                                                                         @if($q->canBeEditedBy(auth()->user()))
+                                                                            <!-- Enable / Disable Switch -->
+                                                                            <div class="form-check form-switch m-0" title="{{ $q->is_active ? 'Active (Click to Disable)' : 'Disabled (Click to Enable)' }}">
+                                                                                <input class="form-check-input question-toggle-btn" 
+                                                                                       type="checkbox" 
+                                                                                       role="switch"
+                                                                                       id="q_survey_toggle_{{ $q->id }}"
+                                                                                       data-id="{{ $q->id }}"
+                                                                                       data-url="{{ route('admin.questions.toggle_status', $q->id) }}"
+                                                                                       {{ $q->is_active ? 'checked' : '' }}
+                                                                                       style="cursor: pointer; width: 2.2em; height: 1.15em;">
+                                                                            </div>
                                                                             <a href="{{ route('admin.questions.edit', $q->id) }}" class="btn btn-sm btn-light border py-0 px-2" title="Edit Question">
                                                                                 <i class="bi bi-pencil"></i>
                                                                             </a>
                                                                         @else
+                                                                            <span class="badge {{ $q->is_active ? 'bg-success-subtle text-success border-success' : 'bg-secondary-subtle text-secondary' }} border py-0 px-2" style="font-size: 0.7rem;">
+                                                                                <i class="bi {{ $q->is_active ? 'bi-check-circle-fill' : 'bi-dash-circle' }} me-1"></i> {{ $q->is_active ? 'Active' : 'Disabled' }}
+                                                                            </span>
                                                                             <span class="badge bg-light text-secondary border py-0 px-2 small" title="Superadmin / Global Question (Read-Only)">
                                                                                 <i class="bi bi-lock-fill text-warning me-1"></i> Read-Only
                                                                             </span>
@@ -335,6 +349,42 @@
         const modal = new bootstrap.Modal(document.getElementById('addSectionModal'));
         modal.show();
     }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll('.question-toggle-btn').forEach(function(toggle) {
+            toggle.addEventListener('change', function() {
+                const isChecked = this.checked;
+                const url = this.dataset.url;
+                const toggleEl = this;
+                
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(res => {
+                    if (!res.ok) throw new Error('Network response was not ok');
+                    return res.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        toggleEl.checked = data.is_active;
+                        toggleEl.closest('.form-switch').title = data.is_active ? 'Active (Click to Disable)' : 'Disabled (Click to Enable)';
+                    } else {
+                        toggleEl.checked = !isChecked;
+                        alert(data.message || 'Could not update status');
+                    }
+                })
+                .catch(err => {
+                    toggleEl.checked = !isChecked;
+                    alert('An error occurred while updating question status.');
+                });
+            });
+        });
+    });
 </script>
 @endpush
 @endsection

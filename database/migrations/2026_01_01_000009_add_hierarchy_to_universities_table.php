@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('universities', function (Blueprint $table) {
-            $table->enum('type', ['university', 'affiliated_college', 'autonomous_college'])->default('university')->after('short_name');
+            $table->enum('type', ['ini', 'university', 'affiliated_college', 'polytechnic_iti'])->default('university')->after('short_name');
             $table->unsignedBigInteger('parent_id')->nullable()->after('type');
 
             $table->foreign('parent_id')->references('id')->on('universities')->onDelete('cascade');

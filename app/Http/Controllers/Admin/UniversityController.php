@@ -78,7 +78,7 @@ class UniversityController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'short_name' => 'required|string|max:50',
-            'type' => 'required|in:ini,university,autonomous_college,affiliated_college,polytechnic_iti',
+            'type' => 'required|in:ini,university,affiliated_college,polytechnic_iti',
             'parent_id' => 'nullable|required_if:type,affiliated_college|exists:universities,id',
             'tagline' => 'nullable|string|max:255',
             'website' => 'nullable|url|max:255',
@@ -141,7 +141,7 @@ class UniversityController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'short_name' => 'required|string|max:50',
-            'type' => 'nullable|in:ini,university,autonomous_college,affiliated_college,polytechnic_iti',
+            'type' => 'nullable|in:ini,university,affiliated_college,polytechnic_iti',
             'parent_id' => 'nullable|exists:universities,id',
             'tagline' => 'nullable|string|max:255',
             'website' => 'nullable|url|max:255',
@@ -223,7 +223,6 @@ class UniversityController extends Controller
         $typeOptions = [
             ['Institute of National Importance (IIT / NIT / IIM / AIIMS)'],
             ['Central / State University'],
-            ['Autonomous College (Independent Academic Autonomy)'],
             ['Affiliated College (Works Under Parent University)'],
             ['Polytechnic & ITI (Technical / Skill Institute)'],
         ];
@@ -291,7 +290,7 @@ class UniversityController extends Controller
 
         $sheet->fromArray($sampleData, null, 'A2');
 
-        $spreadsheet->addNamedRange(new NamedRange('ClassificationList', $lookupSheet, '$A$1:$A$5'));
+        $spreadsheet->addNamedRange(new NamedRange('ClassificationList', $lookupSheet, '$A$1:$A$4'));
 
         // Create Dropdown Data Validation for Type (Column C) referencing NamedRange 'ClassificationList'
         $validation = $sheet->getCell('C2')->getDataValidation();
@@ -403,11 +402,9 @@ class UniversityController extends Controller
             $rawType = trim($data['type'] ?? $data['type_'] ?? $data['classification'] ?? $data['institution_classification_type'] ?? '');
             $typeLower = strtolower($rawType);
 
-            if (str_contains($typeLower, 'national importance') || str_contains($typeLower, 'ini') || str_contains($typeLower, 'iit')) {
+            if (str_contains($typeLower, 'national importance') || str_contains($typeLower, 'ini') || str_contains($typeLower, 'iit') || str_contains($typeLower, 'nit')) {
                 $type = 'ini';
-            } elseif (str_contains($typeLower, 'autonomous')) {
-                $type = 'autonomous_college';
-            } elseif (str_contains($typeLower, 'affiliated')) {
+            } elseif (str_contains($typeLower, 'affiliated') || str_contains($typeLower, 'college')) {
                 $type = 'affiliated_college';
             } elseif (str_contains($typeLower, 'polytechnic') || str_contains($typeLower, 'iti')) {
                 $type = 'polytechnic_iti';
