@@ -366,26 +366,58 @@
                                             <input class="form-check-input" type="radio" name="scope_type" id="sec_scope_g_{{ $sec->id }}" value="global" 
                                                    {{ $secScopeType === 'global' ? 'checked' : '' }}
                                                    onchange="toggleSecScope('{{ $sec->id }}', this.value)">
-                                            <label class="form-check-label small fw-semibold" for="sec_scope_g_{{ $sec->id }}">Common / All</label>
+                                            <label class="form-check-label small fw-semibold cursor-pointer" for="sec_scope_g_{{ $sec->id }}">Common / All</label>
                                         </div>
                                         <div class="form-check">
                                             <input class="form-check-input" type="radio" name="scope_type" id="sec_scope_s_{{ $sec->id }}" value="specific" 
                                                    {{ $secScopeType === 'specific' ? 'checked' : '' }}
                                                    onchange="toggleSecScope('{{ $sec->id }}', this.value)">
-                                            <label class="form-check-label small fw-semibold" for="sec_scope_s_{{ $sec->id }}">Specific Institution(s)</label>
+                                            <label class="form-check-label small fw-semibold cursor-pointer" for="sec_scope_s_{{ $sec->id }}">Specific Institution(s)</label>
                                         </div>
                                     </div>
+
                                     <div id="sec_unis_container_{{ $sec->id }}" class="{{ $secScopeType === 'specific' ? '' : 'd-none' }}">
-                                        <div class="row g-2 p-2 bg-white rounded-3 border overflow-auto" style="max-height: 150px;">
+                                        <!-- Header with select all -->
+                                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-1 mb-2 pt-1 border-top">
+                                            <small class="text-muted" style="font-size: 0.75rem;" id="sec_uni_count_{{ $sec->id }}">{{ count($secUniIds) }} selected</small>
+                                            <div class="d-flex gap-1">
+                                                <button type="button" class="btn btn-outline-primary py-0 px-2 rounded-pill" style="font-size: 0.72rem;" onclick="selectAllSecUnis('{{ $sec->id }}', true)">Select All</button>
+                                                <button type="button" class="btn btn-outline-secondary py-0 px-2 rounded-pill" style="font-size: 0.72rem;" onclick="selectAllSecUnis('{{ $sec->id }}', false)">Deselect All</button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Search input -->
+                                        <div class="input-group input-group-sm mb-2">
+                                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                                            <input type="text" id="sec_uni_search_{{ $sec->id }}" class="form-control border-start-0" placeholder="Search institution..." oninput="filterSecUnis('{{ $sec->id }}')">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="clearSecUniSearch('{{ $sec->id }}')"><i class="bi bi-x-lg"></i></button>
+                                        </div>
+
+                                        <div class="row g-2 p-2 bg-white rounded-3 border overflow-auto" id="sec_uni_list_{{ $sec->id }}" style="max-height: 180px;">
                                             @foreach($universities as $u)
-                                                <div class="col-md-6">
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox" name="university_ids[]" value="{{ $u->id }}" id="sec_uni_{{ $sec->id }}_{{ $u->id }}"
-                                                               {{ in_array($u->id, $secUniIds) ? 'checked' : '' }}>
-                                                        <label class="form-check-label small" for="sec_uni_{{ $sec->id }}_{{ $u->id }}">{{ $u->name }}</label>
+                                                @php
+                                                    $typeLabel = '';
+                                                    if($u->type === 'university') $typeLabel = 'University';
+                                                    elseif($u->type === 'ini') $typeLabel = 'INI';
+                                                    elseif($u->type === 'affiliated_college') $typeLabel = 'Affiliated College';
+                                                    elseif($u->type === 'polytechnic_iti') $typeLabel = 'Polytechnic/ITI';
+                                                @endphp
+                                                <div class="col-md-6 sec-uni-item" data-search-text="{{ strtolower($u->name . ' ' . $u->short_name . ' ' . $typeLabel) }}">
+                                                    <div class="form-check p-1 rounded hover-bg-light border mb-0 h-100 d-flex align-items-center">
+                                                        <input class="form-check-input ms-0 me-2 sec-uni-checkbox" type="checkbox" name="university_ids[]" value="{{ $u->id }}" id="sec_uni_{{ $sec->id }}_{{ $u->id }}"
+                                                               {{ in_array($u->id, $secUniIds) ? 'checked' : '' }} onchange="updateSecSelectedCount('{{ $sec->id }}')">
+                                                        <label class="form-check-label small w-100 cursor-pointer" for="sec_uni_{{ $sec->id }}_{{ $u->id }}">
+                                                            <strong class="text-dark">{{ $u->short_name }}</strong> — <span class="text-secondary">{{ Str::limit($u->name, 30) }}</span>
+                                                            @if($typeLabel)
+                                                                <span class="badge bg-light text-secondary border ms-1" style="font-size: 0.6rem;">{{ $typeLabel }}</span>
+                                                            @endif
+                                                        </label>
                                                     </div>
                                                 </div>
                                             @endforeach
+                                        </div>
+                                        <div id="sec_no_match_{{ $sec->id }}" class="text-center py-2 text-muted small d-none">
+                                            No matching institutions found.
                                         </div>
                                     </div>
                                 </div>
@@ -463,23 +495,55 @@
                             <div class="d-flex gap-3 mb-2">
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio" name="scope_type" id="new_sec_scope_g" value="global" checked onchange="toggleSecScope('new', this.value)">
-                                    <label class="form-check-label small fw-semibold" for="new_sec_scope_g">Common / All</label>
+                                    <label class="form-check-label small fw-semibold cursor-pointer" for="new_sec_scope_g">Common / All</label>
                                 </div>
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio" name="scope_type" id="new_sec_scope_s" value="specific" onchange="toggleSecScope('new', this.value)">
-                                    <label class="form-check-label small fw-semibold" for="new_sec_scope_s">Specific Institution(s)</label>
+                                    <label class="form-check-label small fw-semibold cursor-pointer" for="new_sec_scope_s">Specific Institution(s)</label>
                                 </div>
                             </div>
+
                             <div id="sec_unis_container_new" class="d-none">
-                                <div class="row g-2 p-2 bg-white rounded-3 border overflow-auto" style="max-height: 150px;">
+                                <!-- Header with select all -->
+                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-1 mb-2 pt-1 border-top">
+                                    <small class="text-muted" style="font-size: 0.75rem;" id="sec_uni_count_new">0 selected</small>
+                                    <div class="d-flex gap-1">
+                                        <button type="button" class="btn btn-outline-primary py-0 px-2 rounded-pill" style="font-size: 0.72rem;" onclick="selectAllSecUnis('new', true)">Select All</button>
+                                        <button type="button" class="btn btn-outline-secondary py-0 px-2 rounded-pill" style="font-size: 0.72rem;" onclick="selectAllSecUnis('new', false)">Deselect All</button>
+                                    </div>
+                                </div>
+
+                                <!-- Search input -->
+                                <div class="input-group input-group-sm mb-2">
+                                    <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                                    <input type="text" id="sec_uni_search_new" class="form-control border-start-0" placeholder="Search institution..." oninput="filterSecUnis('new')">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="clearSecUniSearch('new')"><i class="bi bi-x-lg"></i></button>
+                                </div>
+
+                                <div class="row g-2 p-2 bg-white rounded-3 border overflow-auto" id="sec_uni_list_new" style="max-height: 180px;">
                                     @foreach($universities as $u)
-                                        <div class="col-md-6">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="university_ids[]" value="{{ $u->id }}" id="new_sec_uni_{{ $u->id }}">
-                                                <label class="form-check-label small" for="new_sec_uni_{{ $u->id }}">{{ $u->name }}</label>
+                                        @php
+                                            $typeLabel = '';
+                                            if($u->type === 'university') $typeLabel = 'University';
+                                            elseif($u->type === 'ini') $typeLabel = 'INI';
+                                            elseif($u->type === 'affiliated_college') $typeLabel = 'Affiliated College';
+                                            elseif($u->type === 'polytechnic_iti') $typeLabel = 'Polytechnic/ITI';
+                                        @endphp
+                                        <div class="col-md-6 sec-uni-item" data-search-text="{{ strtolower($u->name . ' ' . $u->short_name . ' ' . $typeLabel) }}">
+                                            <div class="form-check p-1 rounded hover-bg-light border mb-0 h-100 d-flex align-items-center">
+                                                <input class="form-check-input ms-0 me-2 sec-uni-checkbox" type="checkbox" name="university_ids[]" value="{{ $u->id }}" id="new_sec_uni_{{ $u->id }}" onchange="updateSecSelectedCount('new')">
+                                                <label class="form-check-label small w-100 cursor-pointer" for="new_sec_uni_{{ $u->id }}">
+                                                    <strong class="text-dark">{{ $u->short_name }}</strong> — <span class="text-secondary">{{ Str::limit($u->name, 30) }}</span>
+                                                    @if($typeLabel)
+                                                        <span class="badge bg-light text-secondary border ms-1" style="font-size: 0.6rem;">{{ $typeLabel }}</span>
+                                                    @endif
+                                                </label>
                                             </div>
                                         </div>
                                     @endforeach
+                                </div>
+                                <div id="sec_no_match_new" class="text-center py-2 text-muted small d-none">
+                                    No matching institutions found.
                                 </div>
                             </div>
                         </div>
@@ -505,6 +569,53 @@
             } else {
                 container.classList.add('d-none');
             }
+        }
+        updateSecSelectedCount(secId);
+    }
+
+    function filterSecUnis(secId) {
+        const query = (document.getElementById('sec_uni_search_' + secId)?.value || '').toLowerCase().trim();
+        const items = document.querySelectorAll('#sec_uni_list_' + secId + ' .sec-uni-item');
+        let visibleCount = 0;
+
+        items.forEach(item => {
+            const text = item.getAttribute('data-search-text') || '';
+            if (!query || text.includes(query)) {
+                item.classList.remove('d-none');
+                visibleCount++;
+            } else {
+                item.classList.add('d-none');
+            }
+        });
+
+        const noMatch = document.getElementById('sec_no_match_' + secId);
+        if (noMatch) {
+            noMatch.classList.toggle('d-none', visibleCount > 0);
+        }
+    }
+
+    function clearSecUniSearch(secId) {
+        const input = document.getElementById('sec_uni_search_' + secId);
+        if (input) {
+            input.value = '';
+            filterSecUnis(secId);
+            input.focus();
+        }
+    }
+
+    function selectAllSecUnis(secId, check) {
+        const visibleCheckboxes = document.querySelectorAll('#sec_uni_list_' + secId + ' .sec-uni-item:not(.d-none) .sec-uni-checkbox');
+        visibleCheckboxes.forEach(cb => {
+            cb.checked = check;
+        });
+        updateSecSelectedCount(secId);
+    }
+
+    function updateSecSelectedCount(secId) {
+        const checked = document.querySelectorAll('#sec_uni_list_' + secId + ' .sec-uni-checkbox:checked').length;
+        const countEl = document.getElementById('sec_uni_count_' + secId);
+        if (countEl) {
+            countEl.innerText = `${checked} selected`;
         }
     }
 

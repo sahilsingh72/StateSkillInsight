@@ -88,9 +88,20 @@
 
                         @php $affiliateds = $institutions->where('type', 'affiliated_college'); @endphp
                         @if($affiliateds->count() > 0)
-                            <optgroup label="Affiliated Colleges (Under Parent University)">
+                            <optgroup label="Affiliated Colleges">
                                 @foreach($affiliateds as $inst)
-                                    <option value="{{ $inst->id }}" {{ ($selectedUniId == $inst->id) ? 'selected' : '' }}>{{ $inst->name }} {{ $inst->parent ? '(Affiliated to '.$inst->parent->short_name.')' : '' }}</option>
+                                    @php
+                                        $parentName = '';
+                                        if ($inst->parent) {
+                                            $parentName = $inst->parent->name . ($inst->parent->short_name ? ' (' . $inst->parent->short_name . ')' : '');
+                                        }
+                                    @endphp
+                                    <option value="{{ $inst->id }}" 
+                                            data-is-affiliated="1"
+                                            data-parent-name="{{ $parentName }}"
+                                            {{ ($selectedUniId == $inst->id) ? 'selected' : '' }}>
+                                        {{ $inst->name }} {{ $inst->parent && $inst->parent->short_name ? '(' . $inst->parent->short_name . ')' : '' }}
+                                    </option>
                                 @endforeach
                             </optgroup>
                         @endif
@@ -99,11 +110,32 @@
                         @if($polytechnics->count() > 0)
                             <optgroup label="Polytechnics & ITIs (Skill & Technical Institutes)">
                                 @foreach($polytechnics as $inst)
-                                    <option value="{{ $inst->id }}" {{ ($selectedUniId == $inst->id) ? 'selected' : '' }}>{{ $inst->name }} (Polytechnic / ITI)</option>
+                                    <option value="{{ $inst->id }}" 
+                                            data-is-affiliated="0"
+                                            {{ ($selectedUniId == $inst->id) ? 'selected' : '' }}>
+                                        {{ $inst->name }} (Polytechnic / ITI)
+                                    </option>
                                 @endforeach
                             </optgroup>
                         @endif
                     </select>
+                </div>
+
+                <!-- Readonly Affiliating / Parent University -->
+                <div class="col-md-12" id="parent_uni_container_inv" style="display: none;">
+                    <label class="form-label fw-semibold text-muted">
+                        <i class="bi bi-bank2 me-1 text-primary"></i> Affiliating / Parent University
+                        <span class="badge bg-light text-secondary border ms-1">Read-Only</span>
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-secondary-subtle text-primary">
+                            <i class="bi bi-mortarboard-fill"></i>
+                        </span>
+                        <input type="text" id="parent_uni_name_inv" class="form-control bg-light border-secondary-subtle fw-semibold text-dark" readonly disabled placeholder="Affiliating University Name">
+                    </div>
+                    <small class="text-muted d-block mt-1">
+                        This college is affiliated with the parent university displayed above.
+                    </small>
                 </div>
 
                 <div class="col-md-6">
@@ -336,12 +368,32 @@ document.addEventListener("DOMContentLoaded", function() {
                 });
         }
 
-        uniSelect.addEventListener('change', function() {
-            updateProgrammes(this.value);
-        });
+        const parentUniContainerInv = document.getElementById('parent_uni_container_inv');
+        const parentUniInputInv = document.getElementById('parent_uni_name_inv');
+
+        function handleUniChange() {
+            const uniId = uniSelect.value;
+            const opt = uniSelect.querySelector(`option[value="${uniId}"]`);
+            const isAffiliated = opt ? (opt.getAttribute('data-is-affiliated') === '1') : false;
+            const parentName = opt ? (opt.getAttribute('data-parent-name') || '') : '';
+
+            if (parentUniContainerInv && parentUniInputInv) {
+                if (isAffiliated && parentName) {
+                    parentUniInputInv.value = parentName;
+                    parentUniContainerInv.style.display = 'block';
+                } else {
+                    parentUniContainerInv.style.display = 'none';
+                    parentUniInputInv.value = '';
+                }
+            }
+
+            updateProgrammes(uniId);
+        }
+
+        uniSelect.addEventListener('change', handleUniChange);
 
         if (uniSelect.value) {
-            updateProgrammes(uniSelect.value);
+            handleUniChange();
         }
     }
 });

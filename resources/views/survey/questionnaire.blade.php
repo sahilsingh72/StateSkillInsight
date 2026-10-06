@@ -171,7 +171,11 @@
                             <div class="d-flex flex-column gap-2">
                                 @foreach($q->options as $opt)
                                     @php
-                                        $isChecked = isset($existingResponses[$q->id]) && $existingResponses[$q->id]->text_value === $opt->option_text;
+                                        $resp = $existingResponses[$q->id] ?? null;
+                                        $isChecked = $resp && (
+                                            (string)$resp->text_value === (string)$opt->value ||
+                                            (string)$resp->text_value === (string)$opt->option_text
+                                        );
                                     @endphp
                                     <div class="form-check p-3 rounded-3 border option-hover" style="cursor:pointer;">
                                         <input class="form-check-input q-input" type="radio" name="answers[{{ $q->id }}]" id="opt_{{ $opt->id }}" value="{{ $opt->value }}" {{ $isChecked ? 'checked' : '' }}>
@@ -186,8 +190,16 @@
                             <div class="d-flex flex-column gap-2">
                                 @foreach($q->options as $opt)
                                     @php
-                                        $arrVals = isset($existingResponses[$q->id]) && is_array($existingResponses[$q->id]->json_value) ? $existingResponses[$q->id]->json_value : [];
-                                        $isChecked = in_array($opt->option_text, $arrVals);
+                                        $resp = $existingResponses[$q->id] ?? null;
+                                        $arrVals = [];
+                                        if ($resp) {
+                                            if (is_array($resp->json_value)) {
+                                                $arrVals = $resp->json_value;
+                                            } elseif ($resp->text_value) {
+                                                $arrVals = array_map('trim', explode(',', $resp->text_value));
+                                            }
+                                        }
+                                        $isChecked = in_array((string)$opt->value, $arrVals) || in_array((string)$opt->option_text, $arrVals);
                                     @endphp
                                     <div class="form-check p-3 rounded-3 border">
                                         <input class="form-check-input q-input" type="checkbox" name="answers[{{ $q->id }}][]" id="opt_{{ $opt->id }}" value="{{ $opt->value }}" {{ $isChecked ? 'checked' : '' }}>
@@ -202,7 +214,8 @@
                             <div class="d-flex gap-2">
                                 @for($r = 1; $r <= 5; $r++)
                                     @php
-                                        $isChecked = isset($existingResponses[$q->id]) && (int)$existingResponses[$q->id]->text_value === $r;
+                                        $resp = $existingResponses[$q->id] ?? null;
+                                        $isChecked = $resp && ((string)$resp->text_value === (string)$r);
                                     @endphp
                                     <input type="radio" class="btn-check q-input" name="answers[{{ $q->id }}]" id="rate_{{ $q->id }}_{{ $r }}" value="{{ $r }}" {{ $isChecked ? 'checked' : '' }}>
                                     <label class="btn btn-outline-warning text-dark flex-fill py-3 fw-bold" for="rate_{{ $q->id }}_{{ $r }}">
@@ -216,7 +229,11 @@
                                 <option value="">Select an Option</option>
                                 @foreach($q->options as $opt)
                                     @php
-                                        $isSelected = isset($existingResponses[$q->id]) && $existingResponses[$q->id]->text_value === $opt->option_text;
+                                        $resp = $existingResponses[$q->id] ?? null;
+                                        $isSelected = $resp && (
+                                            (string)$resp->text_value === (string)$opt->value ||
+                                            (string)$resp->text_value === (string)$opt->option_text
+                                        );
                                     @endphp
                                     <option value="{{ $opt->value }}" {{ $isSelected ? 'selected' : '' }}>{{ $opt->option_text }}</option>
                                 @endforeach

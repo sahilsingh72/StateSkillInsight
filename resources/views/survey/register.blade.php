@@ -67,18 +67,18 @@
             <input type="hidden" name="category_code" value="{{ $category->code }}">
 
             <div class="row g-3 mb-4">
-                <!-- Step 1: Select Institution / University -->
+                <!-- Institution / College Selection (All institutes & colleges listed) -->
                 <div class="col-md-12">
-                    <label class="form-label fw-semibold">Select Your University / Institute <span class="text-danger">*</span></label>
+                    <label class="form-label fw-semibold">Select Your University / Institute / College <span class="text-danger">*</span></label>
                     <select name="institution_id" id="institution_select" class="form-select border-primary @error('institution_id') is-invalid @enderror @error('university_id') is-invalid @enderror" required>
-                        <option value="">-- Search & Select University / Institute --</option>
+                        <option value=""></option>
                         
-                        @php $unis = $institutions->where('type', 'university'); @endphp
-                        @if($unis->count() > 0)
-                            <optgroup label="Central & State Universities">
-                                @foreach($unis as $inst)
+                        @php $inis = $institutions->where('type', 'ini'); @endphp
+                        @if($inis->count() > 0)
+                            <optgroup label="Institutes of National Importance (IIT / NIT / IIM / AIIMS)">
+                                @foreach($inis as $inst)
                                     <option value="{{ $inst->id }}" 
-                                            data-has-colleges="{{ $inst->colleges->count() > 0 ? '1' : '0' }}"
+                                            data-is-affiliated="0"
                                             {{ old('institution_id', old('university_id')) == $inst->id ? 'selected' : '' }}>
                                         {{ $inst->name }} ({{ $inst->short_name }})
                                     </option>
@@ -86,14 +86,34 @@
                             </optgroup>
                         @endif
 
-                        @php $inis = $institutions->where('type', 'ini'); @endphp
-                        @if($inis->count() > 0)
-                            <optgroup label="Institutes of National Importance (IIT / NIT / IIM / AIIMS)">
-                                @foreach($inis as $inst)
+                        @php $unis = $institutions->where('type', 'university'); @endphp
+                        @if($unis->count() > 0)
+                            <optgroup label="Central & State Universities">
+                                @foreach($unis as $inst)
                                     <option value="{{ $inst->id }}" 
-                                            data-has-colleges="0"
+                                            data-is-affiliated="0"
                                             {{ old('institution_id', old('university_id')) == $inst->id ? 'selected' : '' }}>
                                         {{ $inst->name }} ({{ $inst->short_name }})
+                                    </option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+
+                        @php $affiliateds = $institutions->where('type', 'affiliated_college'); @endphp
+                        @if($affiliateds->count() > 0)
+                            <optgroup label="Affiliated Colleges">
+                                @foreach($affiliateds as $inst)
+                                    @php
+                                        $parentName = '';
+                                        if ($inst->parent) {
+                                            $parentName = $inst->parent->name . ($inst->parent->short_name ? ' (' . $inst->parent->short_name . ')' : '');
+                                        }
+                                    @endphp
+                                    <option value="{{ $inst->id }}" 
+                                            data-is-affiliated="1"
+                                            data-parent-name="{{ $parentName }}"
+                                            {{ old('institution_id', old('university_id')) == $inst->id ? 'selected' : '' }}>
+                                        {{ $inst->name }} {{ $inst->parent && $inst->parent->short_name ? '(' . $inst->parent->short_name . ')' : '' }}
                                     </option>
                                 @endforeach
                             </optgroup>
@@ -104,7 +124,7 @@
                             <optgroup label="Polytechnics & ITIs (Skill & Technical Institutes)">
                                 @foreach($polytechnics as $inst)
                                     <option value="{{ $inst->id }}" 
-                                            data-has-colleges="0"
+                                            data-is-affiliated="0"
                                             {{ old('institution_id', old('university_id')) == $inst->id ? 'selected' : '' }}>
                                         {{ $inst->name }} (Polytechnic / ITI)
                                     </option>
@@ -120,18 +140,20 @@
                     @enderror
                 </div>
 
-                <!-- Step 2: Conditional College / Campus Dropdown -->
-                <div class="col-md-12" id="college_container" style="display: none;">
-                    <label class="form-label fw-semibold">Select College / Campus <span class="text-danger">*</span></label>
-                    <select name="college_id" id="college_select" class="form-select border-primary @error('college_id') is-invalid @enderror">
-                        <option value="main_campus">University Main Campus / University Departments</option>
-                    </select>
+                <!-- Readonly Affiliating / Parent University (Shown when an affiliated college is selected) -->
+                <div class="col-md-12" id="parent_uni_container" style="display: none;">
+                    <label class="form-label fw-semibold text-muted">
+                        Affiliating University
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-secondary-subtle text-primary">
+                            <i class="bi bi-mortarboard-fill"></i>
+                        </span>
+                        <input type="text" id="parent_uni_name" class="form-control bg-light border-secondary-subtle fw-semibold text-dark" readonly disabled placeholder="Affiliating University Name">
+                    </div>
                     <small class="text-muted d-block mt-1">
-                        Select your specific affiliated college, or choose <strong>"University Main Campus"</strong> if you study directly in university departments.
+                        If you see a different university name, there is nothing to worry about. Your college is currently affiliated with the university mentioned.
                     </small>
-                    @error('college_id')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
@@ -379,6 +401,12 @@
         padding: 0 2px !important;
         border-radius: 2px !important;
     }
+    .ts-control input:focus::placeholder,
+    .ts-wrapper.focus .ts-control input::placeholder,
+    .ts-wrapper.input-active .ts-control input::placeholder {
+        color: transparent !important;
+        opacity: 0 !important;
+    }
 </style>
 @endpush
 
@@ -388,8 +416,8 @@
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     const institutionSelect = document.getElementById('institution_select');
-    const collegeContainer = document.getElementById('college_container');
-    const collegeSelect = document.getElementById('college_select');
+    const parentUniContainer = document.getElementById('parent_uni_container');
+    const parentUniInput = document.getElementById('parent_uni_name');
 
     const progSelect = document.getElementById('programme_select');
     const otherProgContainer = document.getElementById('other_programme_container');
@@ -399,44 +427,24 @@ document.addEventListener("DOMContentLoaded", function() {
     const otherDeptContainer = document.getElementById('other_department_container');
     const otherDeptInput = document.getElementById('other_department_input');
 
-    const savedOldCollege = "{{ old('college_id') }}";
     const savedOldProg = "{{ old('programme') }}";
     const savedOldDept = "{{ old('department') }}";
 
-    // Initialize TomSelect on University and College dropdowns
+    // Initialize TomSelect on Institution dropdown
     let instTomSelect = null;
-    let collegeTomSelect = null;
 
     if (institutionSelect) {
         instTomSelect = new TomSelect('#institution_select', {
             create: false,
             maxItems: 1,
-            placeholder: '-- Search & Select University / Institute --',
-            allowEmptyOption: true,
+            placeholder: 'Search & Select University / Institute / College',
+            allowEmptyOption: false,
             highlight: true,
+            hidePlaceholder: true,
+            openOnFocus: true,
             sortField: { field: '$order' },
             searchField: ['text']
         });
-    }
-
-    if (collegeSelect) {
-        collegeTomSelect = new TomSelect('#college_select', {
-            create: false,
-            maxItems: 1,
-            placeholder: '-- Search & Select College / Campus --',
-            allowEmptyOption: true,
-            highlight: true,
-            sortField: { field: '$order' },
-            searchField: ['text']
-        });
-    }
-
-    function getActiveInstitutionId() {
-        const colVal = collegeTomSelect ? collegeTomSelect.getValue() : (collegeSelect ? collegeSelect.value : '');
-        if (collegeContainer.style.display !== 'none' && colVal && colVal !== 'main_campus') {
-            return colVal;
-        }
-        return instTomSelect ? instTomSelect.getValue() : (institutionSelect ? institutionSelect.value : '');
     }
 
     function checkOtherProgramme() {
@@ -464,7 +472,8 @@ document.addEventListener("DOMContentLoaded", function() {
     if (progSelect) {
         progSelect.addEventListener('change', function() {
             checkOtherProgramme();
-            updateDepartments(getActiveInstitutionId(), this.value);
+            const instId = instTomSelect ? instTomSelect.getValue() : (institutionSelect ? institutionSelect.value : '');
+            updateDepartments(instId, this.value);
         });
     }
 
@@ -566,98 +575,27 @@ document.addEventListener("DOMContentLoaded", function() {
     function handleInstitutionChange(isInit = false) {
         const instId = instTomSelect ? instTomSelect.getValue() : (institutionSelect ? institutionSelect.value : '');
         if (!instId) {
-            collegeContainer.style.display = 'none';
-            if (collegeSelect) collegeSelect.removeAttribute('required');
+            if (parentUniContainer) parentUniContainer.style.display = 'none';
+            if (parentUniInput) parentUniInput.value = '';
             updateProgrammes('');
             return;
         }
 
         const opt = institutionSelect ? institutionSelect.querySelector(`option[value="${instId}"]`) : null;
-        const hasColleges = opt ? opt.getAttribute('data-has-colleges') === '1' : false;
+        const isAffiliated = opt ? (opt.getAttribute('data-is-affiliated') === '1') : false;
+        const parentName = opt ? (opt.getAttribute('data-parent-name') || '') : '';
 
-        if (hasColleges) {
-            collegeContainer.style.display = 'block';
-
-            if (collegeTomSelect) {
-                collegeTomSelect.clear();
-                collegeTomSelect.clearOptions();
-                collegeTomSelect.clearOptionGroups();
-                collegeTomSelect.addOption({
-                    value: 'main_campus',
-                    text: 'University Main Campus / University Departments'
-                });
-                collegeTomSelect.setValue('main_campus');
-            } else if (collegeSelect) {
-                collegeSelect.innerHTML = '<option value="">Loading affiliated colleges...</option>';
+        if (parentUniContainer && parentUniInput) {
+            if (isAffiliated && parentName) {
+                parentUniInput.value = parentName;
+                parentUniContainer.style.display = 'block';
+            } else {
+                parentUniContainer.style.display = 'none';
+                parentUniInput.value = '';
             }
-
-            fetch('/api/universities/' + instId + '/colleges')
-                .then(res => res.json())
-                .then(data => {
-                    if (collegeTomSelect) {
-                        collegeTomSelect.clearOptions();
-                        collegeTomSelect.clearOptionGroups();
-                        collegeTomSelect.addOption({
-                            value: 'main_campus',
-                            text: 'University Main Campus / University Departments'
-                        });
-
-                        if (data.colleges && data.colleges.length > 0) {
-                            collegeTomSelect.addOptionGroup('affiliated', { label: 'Affiliated Colleges' });
-                            data.colleges.forEach(col => {
-                                collegeTomSelect.addOption({
-                                    value: String(col.id),
-                                    text: col.name,
-                                    optgroup: 'affiliated'
-                                });
-                            });
-                        }
-                        collegeTomSelect.refreshOptions(false);
-
-                        if (isInit && savedOldCollege) {
-                            collegeTomSelect.setValue(String(savedOldCollege));
-                        } else {
-                            collegeTomSelect.setValue('main_campus');
-                        }
-                    } else if (collegeSelect) {
-                        collegeSelect.innerHTML = '<option value="main_campus">University Main Campus / University Departments</option>';
-                        if (data.colleges && data.colleges.length > 0) {
-                            const optgroup = document.createElement('optgroup');
-                            optgroup.label = "Affiliated Colleges";
-                            data.colleges.forEach(col => {
-                                const optEl = document.createElement('option');
-                                optEl.value = col.id;
-                                optEl.textContent = col.name;
-                                if (isInit && savedOldCollege && (savedOldCollege == col.id || savedOldCollege === col.name)) {
-                                    optEl.selected = true;
-                                }
-                                optgroup.appendChild(optEl);
-                            });
-                            collegeSelect.appendChild(optgroup);
-                        }
-                    }
-
-                    const activeId = getActiveInstitutionId();
-                    updateProgrammes(activeId, isInit ? savedOldProg : '', isInit ? savedOldDept : '');
-                })
-                .catch(err => {
-                    console.error('Error loading colleges:', err);
-                    if (collegeTomSelect) {
-                        collegeTomSelect.setValue('main_campus');
-                    } else if (collegeSelect) {
-                        collegeSelect.innerHTML = '<option value="main_campus">University Main Campus / University Departments</option>';
-                    }
-                    updateProgrammes(instId, isInit ? savedOldProg : '', isInit ? savedOldDept : '');
-                });
-        } else {
-            collegeContainer.style.display = 'none';
-            if (collegeTomSelect) {
-                collegeTomSelect.setValue('main_campus');
-            } else if (collegeSelect) {
-                collegeSelect.value = 'main_campus';
-            }
-            updateProgrammes(instId, isInit ? savedOldProg : '', isInit ? savedOldDept : '');
         }
+
+        updateProgrammes(instId, isInit ? savedOldProg : '', isInit ? savedOldDept : '');
     }
 
     if (instTomSelect) {
@@ -667,18 +605,6 @@ document.addEventListener("DOMContentLoaded", function() {
     } else if (institutionSelect) {
         institutionSelect.addEventListener('change', function() {
             handleInstitutionChange(false);
-        });
-    }
-
-    if (collegeTomSelect) {
-        collegeTomSelect.on('change', function() {
-            const activeId = getActiveInstitutionId();
-            updateProgrammes(activeId);
-        });
-    } else if (collegeSelect) {
-        collegeSelect.addEventListener('change', function() {
-            const activeId = getActiveInstitutionId();
-            updateProgrammes(activeId);
         });
     }
 

@@ -61,7 +61,7 @@
                             <input class="form-check-input" type="radio" name="scope_type" id="q_scope_global" value="global" 
                                    {{ old('scope_type', $currentScopeType ?? 'global') === 'global' ? 'checked' : '' }}
                                    onchange="toggleQScope(this.value)">
-                            <label class="form-check-label fw-semibold" for="q_scope_global">
+                            <label class="form-check-label fw-semibold cursor-pointer" for="q_scope_global">
                                 <i class="bi bi-globe me-1 text-primary"></i> Common / All Institutions (Global Question)
                             </label>
                         </div>
@@ -69,34 +69,73 @@
                             <input class="form-check-input" type="radio" name="scope_type" id="q_scope_specific" value="specific" 
                                    {{ old('scope_type', $currentScopeType ?? 'global') === 'specific' ? 'checked' : '' }}
                                    onchange="toggleQScope(this.value)">
-                            <label class="form-check-label fw-semibold" for="q_scope_specific">
+                            <label class="form-check-label fw-semibold cursor-pointer" for="q_scope_specific">
                                 <i class="bi bi-building me-1 text-primary"></i> Specific Institution(s)
                             </label>
                         </div>
                     </div>
 
                     <div id="q_universities_container" class="{{ old('scope_type', $currentScopeType ?? 'global') === 'specific' ? '' : 'd-none' }}">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <label class="form-label fw-semibold small mb-0">Select Target Institution(s) <span class="text-danger">*</span></label>
-                            <div class="btn-group btn-group-sm">
-                                <button type="button" class="btn btn-outline-secondary py-0 px-2 btn-xs" onclick="selectAllQUnis(true)">Select All</button>
-                                <button type="button" class="btn btn-outline-secondary py-0 px-2 btn-xs" onclick="selectAllQUnis(false)">Deselect All</button>
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 pb-2 border-bottom">
+                            <div>
+                                <small class="text-muted fw-semibold d-block">
+                                    <i class="bi bi-check2-square me-1 text-primary"></i> Select Target Institution(s) <span class="text-danger">*</span>
+                                </small>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2 rounded-pill" onclick="selectAllQUnis(true)" style="font-size: 0.78rem;">
+                                    <i class="bi bi-check-all me-1"></i> Select All
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 rounded-pill" onclick="selectAllQUnis(false)" style="font-size: 0.78rem;">
+                                    <i class="bi bi-x-lg me-1"></i> Deselect All
+                                </button>
                             </div>
                         </div>
-                        <div class="row g-2 p-3 bg-white rounded-3 border overflow-auto" style="max-height: 200px;">
+
+                        <!-- Search Input Bar -->
+                        <div class="mb-3">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-white border-end-0 text-muted">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text" id="qUniSearchInput" class="form-control border-start-0" placeholder="Search by university / college name, code..." oninput="filterQUnis()">
+                                <button class="btn btn-outline-secondary" type="button" onclick="clearQUniSearch()" title="Clear Search">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mt-1 px-1">
+                                <small class="text-muted" style="font-size: 0.75rem;" id="qUniFilterCount">Showing all {{ count($universities) }} institutions</small>
+                                <small class="text-muted" style="font-size: 0.75rem;" id="qUniSelectedCount">0 selected</small>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 p-2 bg-white rounded-3 border overflow-auto" id="qUniCheckboxList" style="max-height: 220px;">
                             @foreach($universities as $u)
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input q-uni-checkbox" type="checkbox" name="university_ids[]" value="{{ $u->id }}" id="q_uni_{{ $u->id }}"
-                                               {{ (in_array($u->id, old('university_ids', $selectedUniversityIds ?? []))) ? 'checked' : '' }}>
-                                        <label class="form-check-label small" for="q_uni_{{ $u->id }}">
-                                            {{ $u->name }} <span class="text-muted">({{ $u->short_name }})</span>
+                                @php
+                                    $typeLabel = '';
+                                    if($u->type === 'university') $typeLabel = 'University';
+                                    elseif($u->type === 'ini') $typeLabel = 'INI';
+                                    elseif($u->type === 'affiliated_college') $typeLabel = 'Affiliated College';
+                                    elseif($u->type === 'polytechnic_iti') $typeLabel = 'Polytechnic/ITI';
+                                @endphp
+                                <div class="col-md-6 q-uni-item" data-search-text="{{ strtolower($u->name . ' ' . $u->short_name . ' ' . $typeLabel) }}">
+                                    <div class="form-check p-2 rounded hover-bg-light border mb-0 h-100 d-flex align-items-center">
+                                        <input class="form-check-input ms-0 me-2 q-uni-checkbox" type="checkbox" name="university_ids[]" value="{{ $u->id }}" id="q_uni_{{ $u->id }}"
+                                               {{ (in_array($u->id, old('university_ids', $selectedUniversityIds ?? []))) ? 'checked' : '' }} onchange="updateQSelectedCount()">
+                                        <label class="form-check-label small w-100 cursor-pointer" for="q_uni_{{ $u->id }}">
+                                            <strong class="text-dark">{{ $u->short_name }}</strong> — <span class="text-secondary">{{ Str::limit($u->name, 35) }}</span>
+                                            @if($typeLabel)
+                                                <span class="badge bg-light text-secondary border ms-1" style="font-size: 0.65rem;">{{ $typeLabel }}</span>
+                                            @endif
                                         </label>
                                     </div>
                                 </div>
                             @endforeach
                         </div>
-                        <small class="text-muted d-block mt-1">This question will be shown only to respondents from the selected institution(s).</small>
+                        <div id="qNoUniMatchMsg" class="text-center py-3 text-muted small d-none">
+                            <i class="bi bi-search me-1"></i> No universities or colleges matching your search.
+                        </div>
+                        <small class="text-muted d-block mt-2">This question will be shown only to respondents from the selected institution(s).</small>
                     </div>
                 </div>
             @elseif(auth()->check() && auth()->user()->university)
@@ -198,9 +237,62 @@
                 container.classList.add('d-none');
             }
         }
+        updateQSelectedCount();
     }
+
+    function filterQUnis() {
+        const query = (document.getElementById('qUniSearchInput')?.value || '').toLowerCase().trim();
+        const items = document.querySelectorAll('#qUniCheckboxList .q-uni-item');
+        let visibleCount = 0;
+
+        items.forEach(item => {
+            const text = item.getAttribute('data-search-text') || '';
+            if (!query || text.includes(query)) {
+                item.classList.remove('d-none');
+                visibleCount++;
+            } else {
+                item.classList.add('d-none');
+            }
+        });
+
+        const noMatch = document.getElementById('qNoUniMatchMsg');
+        if (noMatch) {
+            noMatch.classList.toggle('d-none', visibleCount > 0);
+        }
+
+        const filterCount = document.getElementById('qUniFilterCount');
+        if (filterCount) {
+            filterCount.innerText = query ? `Showing ${visibleCount} of ${items.length} institutions` : `Showing all ${items.length} institutions`;
+        }
+    }
+
+    function clearQUniSearch() {
+        const input = document.getElementById('qUniSearchInput');
+        if (input) {
+            input.value = '';
+            filterQUnis();
+            input.focus();
+        }
+    }
+
     function selectAllQUnis(checked) {
-        document.querySelectorAll('.q-uni-checkbox').forEach(cb => cb.checked = checked);
+        const visibleItems = document.querySelectorAll('#qUniCheckboxList .q-uni-item:not(.d-none) .q-uni-checkbox');
+        visibleItems.forEach(cb => {
+            cb.checked = checked;
+        });
+        updateQSelectedCount();
     }
+
+    function updateQSelectedCount() {
+        const totalChecked = document.querySelectorAll('#qUniCheckboxList .q-uni-checkbox:checked').length;
+        const countEl = document.getElementById('qUniSelectedCount');
+        if (countEl) {
+            countEl.innerText = `${totalChecked} selected`;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        updateQSelectedCount();
+    });
 </script>
 @endpush

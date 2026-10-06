@@ -18,6 +18,7 @@ class RespondentSurvey extends Model
         'completion_percentage',
         'last_saved_at',
         'completed_at',
+        'reminder_sent_at',
         'ip_address',
         'user_agent',
     ];
@@ -26,6 +27,7 @@ class RespondentSurvey extends Model
         'completion_percentage' => 'float',
         'last_saved_at' => 'datetime',
         'completed_at' => 'datetime',
+        'reminder_sent_at' => 'datetime',
     ];
 
     public function respondent()
