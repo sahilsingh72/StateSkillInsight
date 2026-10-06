@@ -34,6 +34,29 @@
                             if ($q->is_required && !$isAnswered) {
                                 $hasUnansweredRequired = true;
                             }
+
+                            $displayText = 'No response provided';
+                            if ($isAnswered) {
+                                $displayText = $resp->text_value;
+                                if ($q->options && $q->options->isNotEmpty()) {
+                                    $matchedOpt = $q->options->first(function($opt) use ($resp) {
+                                        return (string)$opt->value === (string)$resp->text_value || (string)$opt->option_text === (string)$resp->text_value;
+                                    });
+                                    if ($matchedOpt) {
+                                        $displayText = $matchedOpt->option_text;
+                                    } elseif (is_array($resp->json_value) || \Illuminate\Support\Str::contains($resp->text_value, ',')) {
+                                        $arrVals = is_array($resp->json_value) ? $resp->json_value : array_map('trim', explode(',', $resp->text_value));
+                                        $matchedLabels = [];
+                                        foreach ($arrVals as $valItem) {
+                                            $m = $q->options->first(fn($o) => (string)$o->value === (string)$valItem || (string)$o->option_text === (string)$valItem);
+                                            $matchedLabels[] = $m ? $m->option_text : $valItem;
+                                        }
+                                        if (!empty($matchedLabels)) {
+                                            $displayText = implode(', ', $matchedLabels);
+                                        }
+                                    }
+                                }
+                            }
                         @endphp
                         <div class="list-group-item bg-white py-3 {{ ($q->is_required && !$isAnswered) ? 'border border-danger rounded-3 mb-2 bg-danger-subtle' : '' }}">
                             <div class="d-flex justify-content-between align-items-center mb-1">
@@ -48,9 +71,9 @@
                                     <span class="badge bg-danger text-white small"><i class="bi bi-exclamation-circle me-1"></i> Missing Required Answer</span>
                                 @endif
                             </div>
-                            <div class="{{ $isAnswered ? 'text-primary' : 'text-danger font-monospace' }} small">
+                            <div class="{{ $isAnswered ? 'text-primary fw-medium' : 'text-danger font-monospace' }} small">
                                 <i class="bi bi-chat-left-text me-1"></i>
-                                {{ $isAnswered ? $resp->text_value : 'No response provided' }}
+                                {{ $displayText }}
                             </div>
                             @if($q->is_required && !$isAnswered)
                                 <div class="mt-2">

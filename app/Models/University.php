@@ -49,6 +49,10 @@ class University extends Model
             return $list;
         }
 
+        if ($this->parent_id && $this->parent) {
+            return $this->parent->available_programmes;
+        }
+
         return ['Other'];
     }
 
@@ -76,6 +80,10 @@ class University extends Model
                     }
                 }
             }
+        }
+
+        if ($this->parent_id && $this->parent) {
+            return $this->parent->getDepartmentsForProgramme($programmeName);
         }
 
         return ['Other'];

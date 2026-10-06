@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SendIncompleteSurveyReminderJob;
+use App\Mail\SurveyCompletedMail;
 use App\Models\Question;
 use App\Models\QuestionOption;
 use App\Models\Respondent;
@@ -15,6 +17,8 @@ use App\Models\University;
 use App\Services\InterventionEngine;
 use App\Services\ScoringService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class PublicSurveyController extends Controller
@@ -47,7 +51,7 @@ class PublicSurveyController extends Controller
         }
 
         $category = SurveyCategory::where('survey_id', $survey->id)->where('code', $categoryCode)->firstOrFail();
-        $institutions = University::with(['colleges' => function ($q) {
+        $institutions = University::with(['parent', 'colleges' => function ($q) {
             $q->where('is_active', true)->orderBy('name');
         }])->where('is_active', true)->orderBy('type')->orderBy('name')->get();
 
@@ -172,6 +176,15 @@ class PublicSurveyController extends Controller
             'user_agent' => $request->userAgent(),
         ]);
 
+        // Dispatch delayed 15-minute incomplete survey reminder job
+        if (!empty($respondent->email) && filter_var($respondent->email, FILTER_VALIDATE_EMAIL)) {
+            try {
+                SendIncompleteSurveyReminderJob::dispatch($respondentSurvey->id)->delay(now()->addMinutes(15));
+            } catch (\Throwable $e) {
+                Log::warning("Could not dispatch incomplete survey reminder job: " . $e->getMessage());
+            }
+        }
+
         return redirect()->route('survey.take', ['token' => $token]);
     }
 
@@ -294,7 +307,7 @@ class PublicSurveyController extends Controller
 
         $firstSection = $this->getSectionsForRespondent($category, $respondent->university_id)->first();
 
-        RespondentSurvey::create([
+        $respondentSurvey = RespondentSurvey::create([
             'respondent_id' => $respondent->id,
             'survey_id' => $survey->id,
             'category_id' => $category->id,
@@ -305,6 +318,15 @@ class PublicSurveyController extends Controller
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
         ]);
+
+        // Dispatch delayed 15-minute incomplete survey reminder job
+        if (!empty($respondent->email) && filter_var($respondent->email, FILTER_VALIDATE_EMAIL)) {
+            try {
+                SendIncompleteSurveyReminderJob::dispatch($respondentSurvey->id)->delay(now()->addMinutes(15));
+            } catch (\Throwable $e) {
+                Log::warning("Could not dispatch incomplete survey reminder job: " . $e->getMessage());
+            }
+        }
 
         $invitation->update(['status' => 'started']);
 
@@ -469,6 +491,16 @@ class PublicSurveyController extends Controller
             'completion_percentage' => 100.00,
             'completed_at' => now(),
         ]);
+
+        // Send automatic 100% completion email to registered email
+        if (!empty($respondent->email) && filter_var($respondent->email, FILTER_VALIDATE_EMAIL)) {
+            try {
+                Mail::to($respondent->email)->send(new SurveyCompletedMail($respondentSurvey));
+                Log::info("Survey completion email sent to: {$respondent->email} (RespondentSurvey ID: {$respondentSurvey->id})");
+            } catch (\Throwable $e) {
+                Log::error("Failed sending survey completion email to {$respondent->email}: " . $e->getMessage());
+            }
+        }
 
         // Calculate scores & composite indexes
         $scores = $scoringService->calculateAndPersistScores($respondentSurvey);

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Respondent;
 use App\Models\RespondentSurvey;
+use App\Models\University;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ExportService
@@ -11,7 +12,7 @@ class ExportService
     /**
      * Export raw respondent data to CSV.
      */
-    public function exportRespondentsCsv(?string $categoryCode = null): StreamedResponse
+    public function exportRespondentsCsv(?string $categoryCode = null, ?int $universityId = null): StreamedResponse
     {
         $fileName = 'respondents_export_' . date('Y_m_d_His') . '.csv';
 
@@ -19,7 +20,21 @@ class ExportService
         $query = Respondent::with('university');
 
         if ($user && !$user->isSuperAdmin()) {
-            $query->where('university_id', $user->university_id);
+            $userUniId = $user->university_id;
+            $childIds = University::where('parent_id', $userUniId)->pluck('id')->toArray();
+            $allowedUniIds = array_merge([$userUniId], $childIds);
+
+            if ($universityId && in_array($universityId, $allowedUniIds)) {
+                $subChildIds = University::where('parent_id', $universityId)->pluck('id')->toArray();
+                $query->whereIn('university_id', array_merge([$universityId], $subChildIds));
+            } else {
+                $query->whereIn('university_id', $allowedUniIds);
+            }
+        } else {
+            if ($universityId) {
+                $childIds = University::where('parent_id', $universityId)->pluck('id')->toArray();
+                $query->whereIn('university_id', array_merge([$universityId], $childIds));
+            }
         }
 
         if ($categoryCode) {
@@ -34,7 +49,7 @@ class ExportService
         $callback = function () use ($query) {
             $file = fopen('php://output', 'w');
             fputcsv($file, [
-                'ID', 'Name', 'Email', 'Mobile', 'Gender', 'Category Code',
+                'ID', 'Name', 'Email', 'Mobile', 'Institution', 'Gender', 'Category Code',
                 'Programme', 'Department', 'Graduation Year', 'Employment Status', 'City', 'Country', 'Created At'
             ]);
 
@@ -45,6 +60,7 @@ class ExportService
                         $r->name,
                         $r->email,
                         $r->mobile,
+                        $r->university?->name ?? 'N/A',
                         $r->gender,
                         $r->category_code,
                         $r->programme,
@@ -64,3 +80,4 @@ class ExportService
         return response()->stream($callback, 200, $headers);
     }
 }
+

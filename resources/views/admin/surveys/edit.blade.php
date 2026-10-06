@@ -94,31 +94,76 @@
                 <div class="d-flex gap-4 mb-3">
                     <div class="form-check">
                         <input class="form-check-input" type="radio" name="scope_type" id="scopeGlobal" value="global" {{ old('scope_type', $currentScopeType ?? 'global') == 'global' ? 'checked' : '' }} onchange="toggleScopeSelection()">
-                        <label class="form-check-label fw-semibold text-dark" for="scopeGlobal">
+                        <label class="form-check-label fw-semibold text-dark cursor-pointer" for="scopeGlobal">
                             <i class="bi bi-globe me-1 text-primary"></i> Global (All Universities & Colleges)
                         </label>
                     </div>
                     <div class="form-check">
                         <input class="form-check-input" type="radio" name="scope_type" id="scopeSpecific" value="specific" {{ old('scope_type', $currentScopeType ?? 'global') == 'specific' ? 'checked' : '' }} onchange="toggleScopeSelection()">
-                        <label class="form-check-label fw-semibold text-dark" for="scopeSpecific">
+                        <label class="form-check-label fw-semibold text-dark cursor-pointer" for="scopeSpecific">
                             <i class="bi bi-diagram-3 me-1 text-success"></i> Select Specific Universities / Colleges
                         </label>
                     </div>
                 </div>
 
-                <div id="universitySelectionContainer" class="p-3 bg-white rounded-3 border" style="display: none; max-height: 240px; overflow-y: auto;">
-                    <small class="text-muted d-block mb-2 fw-semibold"><i class="bi bi-check2-square me-1"></i> Select the universities/colleges that will see and respond to this survey:</small>
-                    <div class="row g-2">
+                <div id="universitySelectionContainer" class="p-3 bg-white rounded-3 border" style="display: none;">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 pb-2 border-bottom">
+                        <div>
+                            <small class="text-muted fw-semibold d-block">
+                                <i class="bi bi-check2-square me-1 text-primary"></i> Select the universities/colleges that will see and respond to this survey:
+                            </small>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2 rounded-pill" onclick="selectAllUniversities(true)" style="font-size: 0.78rem;">
+                                <i class="bi bi-check-all me-1"></i> Select All
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 rounded-pill" onclick="selectAllUniversities(false)" style="font-size: 0.78rem;">
+                                <i class="bi bi-x-lg me-1"></i> Deselect All
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Search Input Bar -->
+                    <div class="mb-3">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light border-end-0 text-muted">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" id="uniSearchInput" class="form-control border-start-0" placeholder="Search by university / college name, code..." oninput="filterUniversities()">
+                            <button class="btn btn-outline-secondary" type="button" onclick="clearUniSearch()" title="Clear Search">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-1 px-1">
+                            <small class="text-muted" style="font-size: 0.75rem;" id="uniFilterCount">Showing all {{ count($universities) }} institutions</small>
+                            <small class="text-muted" style="font-size: 0.75rem;" id="uniSelectedCount">0 selected</small>
+                        </div>
+                    </div>
+
+                    <div class="row g-2" id="uniCheckboxList" style="max-height: 250px; overflow-y: auto;">
                         @foreach($universities as $u)
-                            <div class="col-md-6">
-                                <div class="form-check p-2 rounded hover-bg-light border mb-1">
-                                    <input class="form-check-input ms-0 me-2" type="checkbox" name="university_ids[]" value="{{ $u->id }}" id="uni_{{ $u->id }}" {{ (in_array($u->id, old('university_ids', $selectedUniversityIds ?? []))) ? 'checked' : '' }}>
-                                    <label class="form-check-label small" for="uni_{{ $u->id }}">
-                                        <strong class="text-dark">{{ $u->short_name }}</strong> — <span class="text-secondary">{{ Str::limit($u->name, 35) }}</span>
+                            @php
+                                $typeLabel = '';
+                                if($u->type === 'university') $typeLabel = 'University';
+                                elseif($u->type === 'ini') $typeLabel = 'INI';
+                                elseif($u->type === 'affiliated_college') $typeLabel = 'Affiliated College';
+                                elseif($u->type === 'polytechnic_iti') $typeLabel = 'Polytechnic/ITI';
+                            @endphp
+                            <div class="col-md-6 uni-item" data-search-text="{{ strtolower($u->name . ' ' . $u->short_name . ' ' . $typeLabel) }}">
+                                <div class="form-check p-2 rounded hover-bg-light border mb-1 h-100 d-flex align-items-center">
+                                    <input class="form-check-input ms-0 me-2 uni-checkbox" type="checkbox" name="university_ids[]" value="{{ $u->id }}" id="uni_{{ $u->id }}" {{ (in_array($u->id, old('university_ids', $selectedUniversityIds ?? []))) ? 'checked' : '' }} onchange="updateSelectedCount()">
+                                    <label class="form-check-label small w-100 cursor-pointer" for="uni_{{ $u->id }}">
+                                        <strong class="text-dark">{{ $u->short_name }}</strong> — <span class="text-secondary">{{ Str::limit($u->name, 40) }}</span>
+                                        @if($typeLabel)
+                                            <span class="badge bg-light text-secondary border ms-1" style="font-size: 0.65rem;">{{ $typeLabel }}</span>
+                                        @endif
                                     </label>
                                 </div>
                             </div>
                         @endforeach
+                    </div>
+                    <div id="noUniMatchMsg" class="text-center py-3 text-muted small d-none">
+                        <i class="bi bi-search me-1"></i> No universities or colleges matching your search.
                     </div>
                 </div>
             </div>
@@ -140,7 +185,64 @@
         if (container) {
             container.style.display = isSpecific ? 'block' : 'none';
         }
+        updateSelectedCount();
     }
-    document.addEventListener('DOMContentLoaded', toggleScopeSelection);
+
+    function filterUniversities() {
+        const query = (document.getElementById('uniSearchInput')?.value || '').toLowerCase().trim();
+        const items = document.querySelectorAll('#uniCheckboxList .uni-item');
+        let visibleCount = 0;
+
+        items.forEach(item => {
+            const text = item.getAttribute('data-search-text') || '';
+            if (!query || text.includes(query)) {
+                item.classList.remove('d-none');
+                visibleCount++;
+            } else {
+                item.classList.add('d-none');
+            }
+        });
+
+        const noMatch = document.getElementById('noUniMatchMsg');
+        if (noMatch) {
+            noMatch.classList.toggle('d-none', visibleCount > 0);
+        }
+
+        const filterCount = document.getElementById('uniFilterCount');
+        if (filterCount) {
+            filterCount.innerText = query ? `Showing ${visibleCount} of ${items.length} institutions` : `Showing all ${items.length} institutions`;
+        }
+    }
+
+    function clearUniSearch() {
+        const input = document.getElementById('uniSearchInput');
+        if (input) {
+            input.value = '';
+            filterUniversities();
+            input.focus();
+        }
+    }
+
+    function selectAllUniversities(check) {
+        // Only select/deselect currently visible items
+        const visibleItems = document.querySelectorAll('#uniCheckboxList .uni-item:not(.d-none) .uni-checkbox');
+        visibleItems.forEach(cb => {
+            cb.checked = check;
+        });
+        updateSelectedCount();
+    }
+
+    function updateSelectedCount() {
+        const totalChecked = document.querySelectorAll('#uniCheckboxList .uni-checkbox:checked').length;
+        const countEl = document.getElementById('uniSelectedCount');
+        if (countEl) {
+            countEl.innerText = `${totalChecked} selected`;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        toggleScopeSelection();
+        updateSelectedCount();
+    });
 </script>
 @endsection
