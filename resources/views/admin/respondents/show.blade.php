@@ -63,10 +63,71 @@
                     <div class="list-group">
                         @foreach($rSurv->responses as $resp)
                             <div class="list-group-item bg-white py-3">
-                                <div class="fw-semibold text-dark small mb-1">{{ $resp->question->question_text }}</div>
-                                <div class="text-primary small fw-semibold">
-                                    <i class="bi bi-chat-left-text me-1"></i> {{ $resp->text_value ?? 'N/A' }}
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <div class="fw-semibold text-dark small">{{ $resp->question->question_text ?? 'Question' }}</div>
+                                    @if($resp->question && $resp->question->type)
+                                        <span class="badge bg-light text-muted border text-uppercase ms-2" style="font-size: 0.65rem;">
+                                            {{ str_replace('_', ' ', $resp->question->type) }}
+                                        </span>
+                                    @endif
                                 </div>
+
+                                @php
+                                    $isVoice = ($resp->question && $resp->question->type === 'voice') 
+                                        || $resp->voiceResponse 
+                                        || str_contains($resp->text_value ?? '', '[Voice Recording Uploaded');
+                                    $voice = $resp->voiceResponse;
+                                @endphp
+
+                                @if($isVoice && $voice && $voice->file_path)
+                                    <div class="mt-2 p-3 bg-light rounded-3 border">
+                                        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-2">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="rounded-circle bg-primary bg-opacity-10 p-2 d-flex align-items-center justify-content-center text-primary" style="width: 34px; height: 34px;">
+                                                    <i class="bi bi-mic-fill"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <span class="badge bg-primary-subtle text-primary border" style="font-size: 0.7rem;">Voice Answer</span>
+                                                        @if($voice->duration_seconds)
+                                                            <span class="badge bg-white text-secondary border" style="font-size: 0.7rem;">
+                                                                <i class="bi bi-clock me-1"></i> {{ $voice->duration_seconds }}s
+                                                            </span>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="d-flex align-items-center gap-2">
+                                                <audio controls preload="none" style="height: 36px; max-width: 250px;">
+                                                    <source src="{{ Storage::url($voice->file_path) }}" type="{{ $voice->mime_type ?? 'audio/webm' }}">
+                                                    Your browser does not support audio playback.
+                                                </audio>
+                                                <a href="{{ Storage::url($voice->file_path) }}" download class="btn btn-sm btn-outline-secondary" title="Download Recording">
+                                                    <i class="bi bi-download"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+
+                                        @if($voice->transcript_text)
+                                            <div class="mt-2 p-2 bg-white rounded border small text-dark">
+                                                <i class="bi bi-quote text-primary me-1"></i> {{ $voice->transcript_text }}
+                                            </div>
+                                        @endif
+                                    </div>
+                                @elseif($isVoice)
+                                    <div class="mt-2 p-2 bg-light rounded border text-muted small d-flex align-items-center gap-2">
+                                        <i class="bi bi-mic-mute text-warning fs-5"></i>
+                                        <div>
+                                            <span>{{ $resp->text_value ?? 'Voice response recorded' }}</span>
+                                            <small class="d-block text-secondary">(Audio file not found on disk or processing)</small>
+                                        </div>
+                                    </div>
+                                @else
+                                    <div class="text-primary small fw-semibold mt-1">
+                                        <i class="bi bi-chat-left-text me-1"></i> {{ $resp->text_value ?? 'N/A' }}
+                                    </div>
+                                @endif
                             </div>
                         @endforeach
                     </div>
