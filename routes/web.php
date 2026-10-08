@@ -74,6 +74,8 @@ Route::middleware(['auth'])->group(function () {
 
         // Question Bank & Builder
         Route::get('/questions', [QuestionController::class, 'index'])->name('questions.index');
+        Route::get('/questions/download-sample-excel', [QuestionController::class, 'downloadSampleExcel'])->name('questions.download_sample_excel');
+        Route::post('/questions/bulk-import', [QuestionController::class, 'bulkImport'])->name('questions.bulk_import');
         Route::get('/questions/create', [QuestionController::class, 'create'])->name('questions.create');
         Route::post('/questions', [QuestionController::class, 'store'])->name('questions.store');
         Route::get('/questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');

@@ -377,10 +377,54 @@
                                     </div>
 
                                     <div id="sec_unis_container_{{ $sec->id }}" class="{{ $secScopeType === 'specific' ? '' : 'd-none' }}">
-                                        <!-- Header with select all -->
+                                        <!-- Affiliating University Quick Selector -->
+                                        @php
+                                            $affiliatingParents = $universities->where('type', 'university')->where('colleges_count', '>', 0)->sortBy('name');
+                                        @endphp
+                                        @if($affiliatingParents->isNotEmpty())
+                                            <div class="p-2 mb-2 bg-white rounded-3 border">
+                                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-1 mb-1">
+                                                    <label for="parent_uni_quick_select_{{ $sec->id }}" class="form-label mb-0 small fw-bold text-primary d-flex align-items-center gap-1" style="font-size: 0.75rem;">
+                                                        <i class="bi bi-diagram-3-fill"></i> Select by Affiliating University:
+                                                    </label>
+                                                    <span class="badge bg-primary-subtle text-primary border" style="font-size: 0.65rem;">
+                                                        {{ $affiliatingParents->count() }} Affiliating Available
+                                                    </span>
+                                                </div>
+                                                <div class="row g-1 align-items-center">
+                                                    <div class="col-sm-7">
+                                                        <select id="parent_uni_quick_select_{{ $sec->id }}" class="form-select form-select-sm" style="font-size: 0.75rem;">
+                                                            <option value="">-- Choose Affiliating Univ... --</option>
+                                                            @foreach($affiliatingParents as $pu)
+                                                                <option value="{{ $pu->id }}" data-count="{{ $pu->colleges_count }}" data-name="{{ $pu->short_name ?: $pu->name }}">
+                                                                    {{ $pu->name }} ({{ $pu->colleges_count }} Colleges)
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-sm-5 d-flex gap-1">
+                                                        <button type="button" class="btn btn-sm btn-primary py-1 px-2 rounded-pill flex-grow-1" onclick="applySecAffiliatingUniSelect('{{ $sec->id }}', true)" style="font-size: 0.72rem;">
+                                                            <i class="bi bi-check2-circle me-1"></i> Auto-Select All
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-1.5 rounded-pill" onclick="applySecAffiliatingUniSelect('{{ $sec->id }}', false)" style="font-size: 0.72rem;" title="Deselect colleges under this university">
+                                                            <i class="bi bi-dash-circle"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
+
+                                        <!-- Feedback Alert -->
+                                        <div id="sec_feedback_msg_{{ $sec->id }}" class="alert alert-info alert-dismissible py-1 px-2 mb-2 small d-none align-items-center justify-content-between" style="font-size: 0.75rem;" role="alert">
+                                            <span id="sec_feedback_text_{{ $sec->id }}"></span>
+                                            <button type="button" class="btn-close py-1" style="font-size: 0.65rem;" onclick="this.parentElement.classList.add('d-none')" aria-label="Close"></button>
+                                        </div>
+
+                                        <!-- Header with select all and counts -->
                                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-1 mb-2 pt-1 border-top">
-                                            <small class="text-muted" style="font-size: 0.75rem;" id="sec_uni_count_{{ $sec->id }}">{{ count($secUniIds) }} selected</small>
-                                            <div class="d-flex gap-1">
+                                            <small class="text-muted" style="font-size: 0.75rem;" id="sec_uni_filter_count_{{ $sec->id }}">Showing all {{ count($universities) }} institutions</small>
+                                            <div class="d-flex gap-1 align-items-center">
+                                                <small class="text-muted fw-semibold text-primary me-1" style="font-size: 0.75rem;" id="sec_uni_count_{{ $sec->id }}">{{ count($secUniIds) }} selected</small>
                                                 <button type="button" class="btn btn-outline-primary py-0 px-2 rounded-pill" style="font-size: 0.72rem;" onclick="selectAllSecUnis('{{ $sec->id }}', true)">Select All</button>
                                                 <button type="button" class="btn btn-outline-secondary py-0 px-2 rounded-pill" style="font-size: 0.72rem;" onclick="selectAllSecUnis('{{ $sec->id }}', false)">Deselect All</button>
                                             </div>
@@ -389,11 +433,11 @@
                                         <!-- Search input -->
                                         <div class="input-group input-group-sm mb-2">
                                             <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                                            <input type="text" id="sec_uni_search_{{ $sec->id }}" class="form-control border-start-0" placeholder="Search institution..." oninput="filterSecUnis('{{ $sec->id }}')">
+                                            <input type="text" id="sec_uni_search_{{ $sec->id }}" class="form-control border-start-0" placeholder="Search by name, affiliating parent, code..." oninput="filterSecUnis('{{ $sec->id }}')">
                                             <button class="btn btn-outline-secondary" type="button" onclick="clearSecUniSearch('{{ $sec->id }}')"><i class="bi bi-x-lg"></i></button>
                                         </div>
 
-                                        <div class="row g-2 p-2 bg-white rounded-3 border overflow-auto" id="sec_uni_list_{{ $sec->id }}" style="max-height: 180px;">
+                                        <div class="row g-2 p-2 bg-white rounded-3 border overflow-auto" id="sec_uni_list_{{ $sec->id }}" style="max-height: 200px;">
                                             @foreach($universities as $u)
                                                 @php
                                                     $typeLabel = '';
@@ -401,15 +445,43 @@
                                                     elseif($u->type === 'ini') $typeLabel = 'INI';
                                                     elseif($u->type === 'affiliated_college') $typeLabel = 'Affiliated College';
                                                     elseif($u->type === 'polytechnic_iti') $typeLabel = 'Polytechnic/ITI';
+
+                                                    $parentText = '';
+                                                    if($u->parent) {
+                                                        $parentText = $u->parent->name . ' ' . ($u->parent->short_name ?? '');
+                                                    }
                                                 @endphp
-                                                <div class="col-md-6 sec-uni-item" data-search-text="{{ strtolower($u->name . ' ' . $u->short_name . ' ' . $typeLabel) }}">
-                                                    <div class="form-check p-1 rounded hover-bg-light border mb-0 h-100 d-flex align-items-center">
-                                                        <input class="form-check-input ms-0 me-2 sec-uni-checkbox" type="checkbox" name="university_ids[]" value="{{ $u->id }}" id="sec_uni_{{ $sec->id }}_{{ $u->id }}"
-                                                               {{ in_array($u->id, $secUniIds) ? 'checked' : '' }} onchange="updateSecSelectedCount('{{ $sec->id }}')">
+                                                <div class="col-md-6 sec-uni-item" 
+                                                     data-search-text="{{ strtolower($u->name . ' ' . $u->short_name . ' ' . $typeLabel . ' ' . $parentText) }}"
+                                                     data-parent-id="{{ $u->parent_id ?? '' }}">
+                                                    <div class="form-check p-1.5 rounded hover-bg-light border mb-0 h-100 d-flex align-items-start">
+                                                        <input class="form-check-input ms-0 me-2 mt-1 sec-uni-checkbox" 
+                                                               type="checkbox" 
+                                                               name="university_ids[]" 
+                                                               value="{{ $u->id }}" 
+                                                               id="sec_uni_{{ $sec->id }}_{{ $u->id }}"
+                                                               data-is-parent="{{ ($u->colleges_count > 0) ? '1' : '0' }}"
+                                                               data-parent-id="{{ $u->parent_id ?? '' }}"
+                                                               data-name="{{ $u->short_name ?: $u->name }}"
+                                                               data-colleges-count="{{ $u->colleges_count }}"
+                                                               {{ in_array($u->id, $secUniIds) ? 'checked' : '' }} 
+                                                               onchange="handleSecUniCheckboxChange('{{ $sec->id }}', this)">
                                                         <label class="form-check-label small w-100 cursor-pointer" for="sec_uni_{{ $sec->id }}_{{ $u->id }}">
-                                                            <strong class="text-dark">{{ $u->short_name }}</strong> — <span class="text-secondary">{{ Str::limit($u->name, 30) }}</span>
-                                                            @if($typeLabel)
-                                                                <span class="badge bg-light text-secondary border ms-1" style="font-size: 0.6rem;">{{ $typeLabel }}</span>
+                                                            <div class="d-flex align-items-center flex-wrap gap-1">
+                                                                <strong class="text-dark">{{ $u->short_name ?: $u->name }}</strong>
+                                                                @if($u->colleges_count > 0)
+                                                                    <span class="badge bg-primary-subtle text-primary border" style="font-size: 0.6rem;" title="Checking this will auto-select all {{ $u->colleges_count }} affiliated colleges">
+                                                                        <i class="bi bi-diagram-3 me-1"></i>{{ $u->colleges_count }} Colleges
+                                                                    </span>
+                                                                @elseif($typeLabel)
+                                                                    <span class="badge bg-light text-secondary border ms-1" style="font-size: 0.6rem;">{{ $typeLabel }}</span>
+                                                                @endif
+                                                            </div>
+                                                            <span class="text-secondary d-block" style="font-size: 0.75rem;">{{ Str::limit($u->name, 35) }}</span>
+                                                            @if($u->parent)
+                                                                <small class="text-muted d-block" style="font-size: 0.68rem;">
+                                                                    <i class="bi bi-arrow-return-right text-primary me-1"></i>Affiliated to: {{ $u->parent->short_name ?: Str::limit($u->parent->name, 22) }}
+                                                                </small>
                                                             @endif
                                                         </label>
                                                     </div>
@@ -417,7 +489,7 @@
                                             @endforeach
                                         </div>
                                         <div id="sec_no_match_{{ $sec->id }}" class="text-center py-2 text-muted small d-none">
-                                            No matching institutions found.
+                                            <i class="bi bi-search me-1"></i> No matching institutions found.
                                         </div>
                                     </div>
                                 </div>
@@ -504,10 +576,54 @@
                             </div>
 
                             <div id="sec_unis_container_new" class="d-none">
-                                <!-- Header with select all -->
+                                <!-- Affiliating University Quick Selector -->
+                                @php
+                                    $affiliatingParents = $universities->where('type', 'university')->where('colleges_count', '>', 0)->sortBy('name');
+                                @endphp
+                                @if($affiliatingParents->isNotEmpty())
+                                    <div class="p-2 mb-2 bg-white rounded-3 border">
+                                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-1 mb-1">
+                                            <label for="parent_uni_quick_select_new" class="form-label mb-0 small fw-bold text-primary d-flex align-items-center gap-1" style="font-size: 0.75rem;">
+                                                <i class="bi bi-diagram-3-fill"></i> Select by Affiliating University:
+                                            </label>
+                                            <span class="badge bg-primary-subtle text-primary border" style="font-size: 0.65rem;">
+                                                {{ $affiliatingParents->count() }} Affiliating Available
+                                            </span>
+                                        </div>
+                                        <div class="row g-1 align-items-center">
+                                            <div class="col-sm-7">
+                                                <select id="parent_uni_quick_select_new" class="form-select form-select-sm" style="font-size: 0.75rem;">
+                                                    <option value="">-- Choose Affiliating Univ... --</option>
+                                                    @foreach($affiliatingParents as $pu)
+                                                        <option value="{{ $pu->id }}" data-count="{{ $pu->colleges_count }}" data-name="{{ $pu->short_name ?: $pu->name }}">
+                                                            {{ $pu->name }} ({{ $pu->colleges_count }} Colleges)
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="col-sm-5 d-flex gap-1">
+                                                <button type="button" class="btn btn-sm btn-primary py-1 px-2 rounded-pill flex-grow-1" onclick="applySecAffiliatingUniSelect('new', true)" style="font-size: 0.72rem;">
+                                                    <i class="bi bi-check2-circle me-1"></i> Auto-Select All
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-1.5 rounded-pill" onclick="applySecAffiliatingUniSelect('new', false)" style="font-size: 0.72rem;" title="Deselect colleges under this university">
+                                                    <i class="bi bi-dash-circle"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
+
+                                <!-- Feedback Alert -->
+                                <div id="sec_feedback_msg_new" class="alert alert-info alert-dismissible py-1 px-2 mb-2 small d-none align-items-center justify-content-between" style="font-size: 0.75rem;" role="alert">
+                                    <span id="sec_feedback_text_new"></span>
+                                    <button type="button" class="btn-close py-1" style="font-size: 0.65rem;" onclick="this.parentElement.classList.add('d-none')" aria-label="Close"></button>
+                                </div>
+
+                                <!-- Header with select all and counts -->
                                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-1 mb-2 pt-1 border-top">
-                                    <small class="text-muted" style="font-size: 0.75rem;" id="sec_uni_count_new">0 selected</small>
-                                    <div class="d-flex gap-1">
+                                    <small class="text-muted" style="font-size: 0.75rem;" id="sec_uni_filter_count_new">Showing all {{ count($universities) }} institutions</small>
+                                    <div class="d-flex gap-1 align-items-center">
+                                        <small class="text-muted fw-semibold text-primary me-1" style="font-size: 0.75rem;" id="sec_uni_count_new">0 selected</small>
                                         <button type="button" class="btn btn-outline-primary py-0 px-2 rounded-pill" style="font-size: 0.72rem;" onclick="selectAllSecUnis('new', true)">Select All</button>
                                         <button type="button" class="btn btn-outline-secondary py-0 px-2 rounded-pill" style="font-size: 0.72rem;" onclick="selectAllSecUnis('new', false)">Deselect All</button>
                                     </div>
@@ -516,11 +632,11 @@
                                 <!-- Search input -->
                                 <div class="input-group input-group-sm mb-2">
                                     <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                                    <input type="text" id="sec_uni_search_new" class="form-control border-start-0" placeholder="Search institution..." oninput="filterSecUnis('new')">
+                                    <input type="text" id="sec_uni_search_new" class="form-control border-start-0" placeholder="Search by name, affiliating parent, code..." oninput="filterSecUnis('new')">
                                     <button class="btn btn-outline-secondary" type="button" onclick="clearSecUniSearch('new')"><i class="bi bi-x-lg"></i></button>
                                 </div>
 
-                                <div class="row g-2 p-2 bg-white rounded-3 border overflow-auto" id="sec_uni_list_new" style="max-height: 180px;">
+                                <div class="row g-2 p-2 bg-white rounded-3 border overflow-auto" id="sec_uni_list_new" style="max-height: 200px;">
                                     @foreach($universities as $u)
                                         @php
                                             $typeLabel = '';
@@ -528,14 +644,42 @@
                                             elseif($u->type === 'ini') $typeLabel = 'INI';
                                             elseif($u->type === 'affiliated_college') $typeLabel = 'Affiliated College';
                                             elseif($u->type === 'polytechnic_iti') $typeLabel = 'Polytechnic/ITI';
+
+                                            $parentText = '';
+                                            if($u->parent) {
+                                                $parentText = $u->parent->name . ' ' . ($u->parent->short_name ?? '');
+                                            }
                                         @endphp
-                                        <div class="col-md-6 sec-uni-item" data-search-text="{{ strtolower($u->name . ' ' . $u->short_name . ' ' . $typeLabel) }}">
-                                            <div class="form-check p-1 rounded hover-bg-light border mb-0 h-100 d-flex align-items-center">
-                                                <input class="form-check-input ms-0 me-2 sec-uni-checkbox" type="checkbox" name="university_ids[]" value="{{ $u->id }}" id="new_sec_uni_{{ $u->id }}" onchange="updateSecSelectedCount('new')">
-                                                <label class="form-check-label small w-100 cursor-pointer" for="new_sec_uni_{{ $u->id }}">
-                                                    <strong class="text-dark">{{ $u->short_name }}</strong> — <span class="text-secondary">{{ Str::limit($u->name, 30) }}</span>
-                                                    @if($typeLabel)
-                                                        <span class="badge bg-light text-secondary border ms-1" style="font-size: 0.6rem;">{{ $typeLabel }}</span>
+                                        <div class="col-md-6 sec-uni-item" 
+                                             data-search-text="{{ strtolower($u->name . ' ' . $u->short_name . ' ' . $typeLabel . ' ' . $parentText) }}"
+                                             data-parent-id="{{ $u->parent_id ?? '' }}">
+                                            <div class="form-check p-1.5 rounded hover-bg-light border mb-0 h-100 d-flex align-items-start">
+                                                <input class="form-check-input ms-0 me-2 mt-1 sec-uni-checkbox" 
+                                                       type="checkbox" 
+                                                       name="university_ids[]" 
+                                                       value="{{ $u->id }}" 
+                                                       id="sec_uni_new_{{ $u->id }}"
+                                                       data-is-parent="{{ ($u->colleges_count > 0) ? '1' : '0' }}"
+                                                       data-parent-id="{{ $u->parent_id ?? '' }}"
+                                                       data-name="{{ $u->short_name ?: $u->name }}"
+                                                       data-colleges-count="{{ $u->colleges_count }}"
+                                                       onchange="handleSecUniCheckboxChange('new', this)">
+                                                <label class="form-check-label small w-100 cursor-pointer" for="sec_uni_new_{{ $u->id }}">
+                                                    <div class="d-flex align-items-center flex-wrap gap-1">
+                                                        <strong class="text-dark">{{ $u->short_name ?: $u->name }}</strong>
+                                                        @if($u->colleges_count > 0)
+                                                            <span class="badge bg-primary-subtle text-primary border" style="font-size: 0.6rem;" title="Checking this will auto-select all {{ $u->colleges_count }} affiliated colleges">
+                                                                <i class="bi bi-diagram-3 me-1"></i>{{ $u->colleges_count }} Colleges
+                                                            </span>
+                                                        @elseif($typeLabel)
+                                                            <span class="badge bg-light text-secondary border ms-1" style="font-size: 0.6rem;">{{ $typeLabel }}</span>
+                                                        @endif
+                                                    </div>
+                                                    <span class="text-secondary d-block" style="font-size: 0.75rem;">{{ Str::limit($u->name, 35) }}</span>
+                                                    @if($u->parent)
+                                                        <small class="text-muted d-block" style="font-size: 0.68rem;">
+                                                            <i class="bi bi-arrow-return-right text-primary me-1"></i>Affiliated to: {{ $u->parent->short_name ?: Str::limit($u->parent->name, 22) }}
+                                                        </small>
                                                     @endif
                                                 </label>
                                             </div>
@@ -543,7 +687,7 @@
                                     @endforeach
                                 </div>
                                 <div id="sec_no_match_new" class="text-center py-2 text-muted small d-none">
-                                    No matching institutions found.
+                                    <i class="bi bi-search me-1"></i> No matching institutions found.
                                 </div>
                             </div>
                         </div>
@@ -573,6 +717,73 @@
         updateSecSelectedCount(secId);
     }
 
+    function handleSecUniCheckboxChange(secId, checkbox) {
+        const isParent = checkbox.getAttribute('data-is-parent') === '1';
+        const uniId = checkbox.value;
+        const isChecked = checkbox.checked;
+
+        if (isParent) {
+            // Auto-select/deselect all colleges under this affiliating university
+            const childCheckboxes = document.querySelectorAll('#sec_uni_list_' + secId + ' .sec-uni-checkbox[data-parent-id="' + uniId + '"]');
+            childCheckboxes.forEach(cb => {
+                cb.checked = isChecked;
+            });
+
+            const parentName = checkbox.getAttribute('data-name') || 'University';
+            const count = childCheckboxes.length;
+            if (count > 0) {
+                showSecSelectionFeedback(secId, (isChecked ? 'Auto-selected ' : 'Deselected ') + parentName + ' and all ' + count + ' affiliated colleges.');
+            }
+        }
+        updateSecSelectedCount(secId);
+    }
+
+    function applySecAffiliatingUniSelect(secId, selectFlag) {
+        const selectEl = document.getElementById('parent_uni_quick_select_' + secId);
+        const parentId = selectEl?.value;
+        if (!parentId) {
+            alert('Please choose an affiliating university from the dropdown first.');
+            return;
+        }
+
+        // Check/uncheck parent university checkbox
+        const parentCheckbox = document.getElementById('sec_uni_' + secId + '_' + parentId);
+        if (parentCheckbox) {
+            parentCheckbox.checked = selectFlag;
+        }
+
+        // Check/uncheck all child colleges
+        const childCheckboxes = document.querySelectorAll('#sec_uni_list_' + secId + ' .sec-uni-checkbox[data-parent-id="' + parentId + '"]');
+        childCheckboxes.forEach(cb => {
+            cb.checked = selectFlag;
+        });
+
+        const selectedOption = selectEl.options[selectEl.selectedIndex];
+        const count = selectedOption.getAttribute('data-count') || childCheckboxes.length;
+        const name = selectedOption.getAttribute('data-name') || 'University';
+
+        showSecSelectionFeedback(secId, (selectFlag ? 'Auto-selected ' : 'Deselected ') + name + ' and all ' + count + ' affiliated colleges.');
+
+        updateSecSelectedCount(secId);
+    }
+
+    function showSecSelectionFeedback(secId, msg) {
+        const alertEl = document.getElementById('sec_feedback_msg_' + secId);
+        const textEl = document.getElementById('sec_feedback_text_' + secId);
+        if (alertEl && textEl) {
+            textEl.innerHTML = '<i class="bi bi-info-circle me-1"></i> ' + msg;
+            alertEl.classList.remove('d-none');
+            alertEl.classList.add('d-flex');
+
+            if (!window._secFeedbackTimeouts) window._secFeedbackTimeouts = {};
+            clearTimeout(window._secFeedbackTimeouts[secId]);
+            window._secFeedbackTimeouts[secId] = setTimeout(() => {
+                alertEl.classList.add('d-none');
+                alertEl.classList.remove('d-flex');
+            }, 5000);
+        }
+    }
+
     function filterSecUnis(secId) {
         const query = (document.getElementById('sec_uni_search_' + secId)?.value || '').toLowerCase().trim();
         const items = document.querySelectorAll('#sec_uni_list_' + secId + ' .sec-uni-item');
@@ -591,6 +802,11 @@
         const noMatch = document.getElementById('sec_no_match_' + secId);
         if (noMatch) {
             noMatch.classList.toggle('d-none', visibleCount > 0);
+        }
+
+        const filterCount = document.getElementById('sec_uni_filter_count_' + secId);
+        if (filterCount) {
+            filterCount.innerText = query ? `Showing ${visibleCount} of ${items.length} institutions` : `Showing all ${items.length} institutions`;
         }
     }
 

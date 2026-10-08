@@ -95,7 +95,7 @@ class SectionController extends Controller
 
         $sections = $query->orderBy('order')->paginate(20)->withQueryString();
         $categories = SurveyCategory::all();
-        $universities = University::all();
+        $universities = University::with(['colleges', 'parent'])->withCount('colleges')->orderBy('name')->get();
 
         return view('admin.sections.index', compact('sections', 'categories', 'universities'));
     }

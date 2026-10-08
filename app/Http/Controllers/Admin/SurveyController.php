@@ -40,7 +40,7 @@ class SurveyController extends Controller
             abort(403, 'Unauthorized. Only Super Administrators can create new survey campaigns.');
         }
 
-        $universities = University::all();
+        $universities = University::with(['colleges', 'parent'])->withCount('colleges')->orderBy('name')->get();
         return view('admin.surveys.create', compact('universities'));
     }
 
@@ -117,7 +117,7 @@ class SurveyController extends Controller
             }
         }
 
-        $universities = University::all();
+        $universities = University::with(['colleges', 'parent'])->withCount('colleges')->orderBy('name')->get();
         $selectedUniversityIds = $survey->universities->pluck('id')->toArray();
         if ($survey->university_id && !in_array($survey->university_id, $selectedUniversityIds)) {
             $selectedUniversityIds[] = $survey->university_id;

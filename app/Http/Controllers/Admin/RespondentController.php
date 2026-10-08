@@ -68,7 +68,13 @@ class RespondentController extends Controller
             }
         }
 
-        $respondent->load(['university.parent', 'respondentSurveys.responses.question', 'respondentSurveys.scores', 'respondentSurveys.interventions.rule']);
+        $respondent->load([
+            'university.parent',
+            'respondentSurveys.responses.question',
+            'respondentSurveys.responses.voiceResponse',
+            'respondentSurveys.scores',
+            'respondentSurveys.interventions.rule'
+        ]);
         return view('admin.respondents.show', compact('respondent'));
     }
 }

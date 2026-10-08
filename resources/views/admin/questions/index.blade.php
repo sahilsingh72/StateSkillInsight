@@ -12,6 +12,9 @@
         <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createSectionModal">
             <i class="bi bi-folder-plus me-1"></i> Add New Section
         </button>
+        <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#bulkQuestionImportModal">
+            <i class="bi bi-file-earmark-excel me-1"></i> Bulk Question Import
+        </button>
         <a href="{{ route('admin.questions.create') }}" class="btn btn-primary-custom btn-sm">
             <i class="bi bi-plus-circle me-1"></i> Add New Question
         </a>
@@ -227,10 +230,54 @@
                             </div>
 
                             <div id="sec_unis_container_new" class="d-none">
-                                <!-- Header with select all -->
+                                <!-- Affiliating University Quick Selector -->
+                                @php
+                                    $affiliatingParents = $universities->where('type', 'university')->where('colleges_count', '>', 0)->sortBy('name');
+                                @endphp
+                                @if($affiliatingParents->isNotEmpty())
+                                    <div class="p-2 mb-2 bg-white rounded-3 border">
+                                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-1 mb-1">
+                                            <label for="parent_uni_quick_select_new" class="form-label mb-0 small fw-bold text-primary d-flex align-items-center gap-1" style="font-size: 0.75rem;">
+                                                <i class="bi bi-diagram-3-fill"></i> Select by Affiliating University:
+                                            </label>
+                                            <span class="badge bg-primary-subtle text-primary border" style="font-size: 0.65rem;">
+                                                {{ $affiliatingParents->count() }} Affiliating Available
+                                            </span>
+                                        </div>
+                                        <div class="row g-1 align-items-center">
+                                            <div class="col-sm-7">
+                                                <select id="parent_uni_quick_select_new" class="form-select form-select-sm" style="font-size: 0.75rem;">
+                                                    <option value="">-- Choose Affiliating Univ... --</option>
+                                                    @foreach($affiliatingParents as $pu)
+                                                        <option value="{{ $pu->id }}" data-count="{{ $pu->colleges_count }}" data-name="{{ $pu->short_name ?: $pu->name }}">
+                                                            {{ $pu->name }} ({{ $pu->colleges_count }} Colleges)
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="col-sm-5 d-flex gap-1">
+                                                <button type="button" class="btn btn-sm btn-primary py-1 px-2 rounded-pill flex-grow-1" onclick="applySecAffiliatingUniSelect('new', true)" style="font-size: 0.72rem;">
+                                                    <i class="bi bi-check2-circle me-1"></i> Auto-Select All
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-1.5 rounded-pill" onclick="applySecAffiliatingUniSelect('new', false)" style="font-size: 0.72rem;" title="Deselect colleges under this university">
+                                                    <i class="bi bi-dash-circle"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
+
+                                <!-- Feedback Alert -->
+                                <div id="sec_feedback_msg_new" class="alert alert-info alert-dismissible py-1 px-2 mb-2 small d-none align-items-center justify-content-between" style="font-size: 0.75rem;" role="alert">
+                                    <span id="sec_feedback_text_new"></span>
+                                    <button type="button" class="btn-close py-1" style="font-size: 0.65rem;" onclick="this.parentElement.classList.add('d-none')" aria-label="Close"></button>
+                                </div>
+
+                                <!-- Header with select all and counts -->
                                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-1 mb-2 pt-1 border-top">
-                                    <small class="text-muted" style="font-size: 0.75rem;" id="sec_uni_count_new">0 selected</small>
-                                    <div class="d-flex gap-1">
+                                    <small class="text-muted" style="font-size: 0.75rem;" id="sec_uni_filter_count_new">Showing all {{ count($universities) }} institutions</small>
+                                    <div class="d-flex gap-1 align-items-center">
+                                        <small class="text-muted fw-semibold text-primary me-1" style="font-size: 0.75rem;" id="sec_uni_count_new">0 selected</small>
                                         <button type="button" class="btn btn-outline-primary py-0 px-2 rounded-pill" style="font-size: 0.72rem;" onclick="selectAllSecUnis('new', true)">Select All</button>
                                         <button type="button" class="btn btn-outline-secondary py-0 px-2 rounded-pill" style="font-size: 0.72rem;" onclick="selectAllSecUnis('new', false)">Deselect All</button>
                                     </div>
@@ -239,11 +286,11 @@
                                 <!-- Search input -->
                                 <div class="input-group input-group-sm mb-2">
                                     <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                                    <input type="text" id="sec_uni_search_new" class="form-control border-start-0" placeholder="Search institution by name, code..." oninput="filterSecUnis('new')">
+                                    <input type="text" id="sec_uni_search_new" class="form-control border-start-0" placeholder="Search by name, affiliating parent, code..." oninput="filterSecUnis('new')">
                                     <button class="btn btn-outline-secondary" type="button" onclick="clearSecUniSearch('new')"><i class="bi bi-x-lg"></i></button>
                                 </div>
 
-                                <div class="row g-2 p-2 bg-white rounded-3 border overflow-auto" id="sec_uni_list_new" style="max-height: 180px;">
+                                <div class="row g-2 p-2 bg-white rounded-3 border overflow-auto" id="sec_uni_list_new" style="max-height: 200px;">
                                     @foreach($universities as $u)
                                         @php
                                             $typeLabel = '';
@@ -251,14 +298,42 @@
                                             elseif($u->type === 'ini') $typeLabel = 'INI';
                                             elseif($u->type === 'affiliated_college') $typeLabel = 'Affiliated College';
                                             elseif($u->type === 'polytechnic_iti') $typeLabel = 'Polytechnic/ITI';
+
+                                            $parentText = '';
+                                            if($u->parent) {
+                                                $parentText = $u->parent->name . ' ' . ($u->parent->short_name ?? '');
+                                            }
                                         @endphp
-                                        <div class="col-md-6 sec-uni-item" data-search-text="{{ strtolower($u->name . ' ' . $u->short_name . ' ' . $typeLabel) }}">
-                                            <div class="form-check p-1 rounded hover-bg-light border mb-0 h-100 d-flex align-items-center">
-                                                <input class="form-check-input ms-0 me-2 sec-uni-checkbox" type="checkbox" name="university_ids[]" value="{{ $u->id }}" id="new_sec_uni_{{ $u->id }}" onchange="updateSecSelectedCount('new')">
-                                                <label class="form-check-label small w-100 cursor-pointer" for="new_sec_uni_{{ $u->id }}">
-                                                    <strong class="text-dark">{{ $u->short_name }}</strong> — <span class="text-secondary">{{ Str::limit($u->name, 30) }}</span>
-                                                    @if($typeLabel)
-                                                        <span class="badge bg-light text-secondary border ms-1" style="font-size: 0.6rem;">{{ $typeLabel }}</span>
+                                        <div class="col-md-6 sec-uni-item" 
+                                             data-search-text="{{ strtolower($u->name . ' ' . $u->short_name . ' ' . $typeLabel . ' ' . $parentText) }}"
+                                             data-parent-id="{{ $u->parent_id ?? '' }}">
+                                            <div class="form-check p-1.5 rounded hover-bg-light border mb-0 h-100 d-flex align-items-start">
+                                                <input class="form-check-input ms-0 me-2 mt-1 sec-uni-checkbox" 
+                                                       type="checkbox" 
+                                                       name="university_ids[]" 
+                                                       value="{{ $u->id }}" 
+                                                       id="sec_uni_new_{{ $u->id }}"
+                                                       data-is-parent="{{ ($u->colleges_count > 0) ? '1' : '0' }}"
+                                                       data-parent-id="{{ $u->parent_id ?? '' }}"
+                                                       data-name="{{ $u->short_name ?: $u->name }}"
+                                                       data-colleges-count="{{ $u->colleges_count }}"
+                                                       onchange="handleSecUniCheckboxChange('new', this)">
+                                                <label class="form-check-label small w-100 cursor-pointer" for="sec_uni_new_{{ $u->id }}">
+                                                    <div class="d-flex align-items-center flex-wrap gap-1">
+                                                        <strong class="text-dark">{{ $u->short_name ?: $u->name }}</strong>
+                                                        @if($u->colleges_count > 0)
+                                                            <span class="badge bg-primary-subtle text-primary border" style="font-size: 0.6rem;" title="Checking this will auto-select all {{ $u->colleges_count }} affiliated colleges">
+                                                                <i class="bi bi-diagram-3 me-1"></i>{{ $u->colleges_count }} Colleges
+                                                            </span>
+                                                        @elseif($typeLabel)
+                                                            <span class="badge bg-light text-secondary border ms-1" style="font-size: 0.6rem;">{{ $typeLabel }}</span>
+                                                        @endif
+                                                    </div>
+                                                    <span class="text-secondary d-block" style="font-size: 0.75rem;">{{ Str::limit($u->name, 35) }}</span>
+                                                    @if($u->parent)
+                                                        <small class="text-muted d-block" style="font-size: 0.68rem;">
+                                                            <i class="bi bi-arrow-return-right text-primary me-1"></i>Affiliated to: {{ $u->parent->short_name ?: Str::limit($u->parent->name, 22) }}
+                                                        </small>
                                                     @endif
                                                 </label>
                                             </div>
@@ -266,7 +341,7 @@
                                     @endforeach
                                 </div>
                                 <div id="sec_no_match_new" class="text-center py-2 text-muted small d-none">
-                                    No matching institutions found.
+                                    <i class="bi bi-search me-1"></i> No matching institutions found.
                                 </div>
                             </div>
                         </div>
@@ -288,6 +363,115 @@
         </div>
     </div>
 </div>
+
+<!-- Modal: Bulk Question Import -->
+<div class="modal fade" id="bulkQuestionImportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <form action="{{ route('admin.questions.bulk_import') }}" method="POST" enctype="multipart/form-data" id="bulkQuestionImportForm">
+                @csrf
+                <div class="modal-header border-bottom bg-light">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-success bg-opacity-10 p-2 me-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                            <i class="bi bi-file-earmark-excel-fill text-success fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0">Bulk Question Import</h5>
+                            <small class="text-muted">Upload an Excel/CSV spreadsheet to batch create questions</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <!-- Step 1: Download Template -->
+                    <div class="card border border-success border-opacity-25 bg-success bg-opacity-10 rounded-3 p-3 mb-3">
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                            <div>
+                                <h6 class="fw-bold text-dark mb-1"><i class="bi bi-download text-success me-1"></i> Step 1: Download Sample Excel Template</h6>
+                                <p class="text-secondary small mb-0">
+                                    Pre-populated with all required columns, interactive category & question type dropdowns, and realistic sample data.
+                                </p>
+                            </div>
+                            <div>
+                                <a href="{{ route('admin.questions.download_sample_excel') }}" class="btn btn-success btn-sm px-3 text-nowrap shadow-sm">
+                                    <i class="bi bi-file-earmark-arrow-down-fill me-1"></i> Download Template (.xlsx)
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Role Scope Notice -->
+                    @if(auth()->check() && auth()->user()->isSuperAdmin())
+                        <div class="alert alert-primary d-flex align-items-center py-2 px-3 mb-3 rounded-3 border-primary border-opacity-25">
+                            <i class="bi bi-globe-americas fs-4 text-primary me-2"></i>
+                            <div class="small">
+                                <strong>Super Admin Scope:</strong> Imported questions will be automatically assigned as <strong>Common / Global Questions</strong> accessible to all universities & colleges state-wide.
+                            </div>
+                        </div>
+                    @else
+                        <div class="alert alert-info d-flex align-items-center py-2 px-3 mb-3 rounded-3 border-info border-opacity-25">
+                            <i class="bi bi-building fs-4 text-info me-2"></i>
+                            <div class="small">
+                                <strong>University Scope:</strong> Imported questions will be automatically assigned exclusively to <strong>{{ auth()->user()->university->name ?? 'your institution' }}</strong>.
+                            </div>
+                        </div>
+                    @endif
+
+                    <!-- Step 2: Upload File -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark">Step 2: Choose Excel / CSV File to Import <span class="text-danger">*</span></label>
+                        <input type="file" name="import_file" class="form-control" accept=".xlsx,.xls,.csv" required>
+                        <div class="form-text small text-muted">
+                            Supported formats: <code>.xlsx</code>, <code>.xls</code>, <code>.csv</code> (Maximum file size: 10MB).
+                        </div>
+                    </div>
+
+                    <!-- Guidelines Accordion / Helper -->
+                    <div class="card bg-light border-0 rounded-3 p-3">
+                        <h6 class="fw-semibold text-dark mb-2 small"><i class="bi bi-info-circle text-primary me-1"></i> Spreadsheet Column Guidelines:</h6>
+                        <div class="row g-2 small text-secondary">
+                            <div class="col-md-6">
+                                <strong>Target Category:</strong> Select from dropdown list (e.g. <code>cat_1: Working Alumni</code>).
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Section Title:</strong> Dependent dropdown — automatically filters to show only sections belonging to the selected Target Category.
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Question Statement:</strong> The question text / prompt (Required).
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Question Type:</strong> Select from dropdown (Single Choice, Likert, Rating, Text, Voice, etc.).
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Options:</strong> Separated by semicolon (<code>;</code>) for Choice and Dropdown types.
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Psychometric Dimension:</strong> Select from dropdown list or <code>None</code>.
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Must to Answer:</strong> <code>Yes</code> or <code>No</code> (Default: No).
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Status:</strong> <code>Active</code> or <code>Disabled</code> (Default: Active).
+                            </div>
+                            <div class="col-12">
+                                <strong>Tags:</strong> Comma-separated tags (e.g. <code>technical, practical, ai</code>).
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-top px-4 py-3 bg-light">
+                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success px-4" id="btnSubmitImport">
+                        <i class="bi bi-cloud-arrow-up me-1"></i> Start Bulk Import
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
@@ -302,6 +486,73 @@
             }
         }
         updateSecSelectedCount(secId);
+    }
+
+    function handleSecUniCheckboxChange(secId, checkbox) {
+        const isParent = checkbox.getAttribute('data-is-parent') === '1';
+        const uniId = checkbox.value;
+        const isChecked = checkbox.checked;
+
+        if (isParent) {
+            // Auto-select/deselect all colleges under this affiliating university
+            const childCheckboxes = document.querySelectorAll('#sec_uni_list_' + secId + ' .sec-uni-checkbox[data-parent-id="' + uniId + '"]');
+            childCheckboxes.forEach(cb => {
+                cb.checked = isChecked;
+            });
+
+            const parentName = checkbox.getAttribute('data-name') || 'University';
+            const count = childCheckboxes.length;
+            if (count > 0) {
+                showSecSelectionFeedback(secId, (isChecked ? 'Auto-selected ' : 'Deselected ') + parentName + ' and all ' + count + ' affiliated colleges.');
+            }
+        }
+        updateSecSelectedCount(secId);
+    }
+
+    function applySecAffiliatingUniSelect(secId, selectFlag) {
+        const selectEl = document.getElementById('parent_uni_quick_select_' + secId);
+        const parentId = selectEl?.value;
+        if (!parentId) {
+            alert('Please choose an affiliating university from the dropdown first.');
+            return;
+        }
+
+        // Check/uncheck parent university checkbox
+        const parentCheckbox = document.getElementById('sec_uni_' + secId + '_' + parentId);
+        if (parentCheckbox) {
+            parentCheckbox.checked = selectFlag;
+        }
+
+        // Check/uncheck all child colleges
+        const childCheckboxes = document.querySelectorAll('#sec_uni_list_' + secId + ' .sec-uni-checkbox[data-parent-id="' + parentId + '"]');
+        childCheckboxes.forEach(cb => {
+            cb.checked = selectFlag;
+        });
+
+        const selectedOption = selectEl.options[selectEl.selectedIndex];
+        const count = selectedOption.getAttribute('data-count') || childCheckboxes.length;
+        const name = selectedOption.getAttribute('data-name') || 'University';
+
+        showSecSelectionFeedback(secId, (selectFlag ? 'Auto-selected ' : 'Deselected ') + name + ' and all ' + count + ' affiliated colleges.');
+
+        updateSecSelectedCount(secId);
+    }
+
+    function showSecSelectionFeedback(secId, msg) {
+        const alertEl = document.getElementById('sec_feedback_msg_' + secId);
+        const textEl = document.getElementById('sec_feedback_text_' + secId);
+        if (alertEl && textEl) {
+            textEl.innerHTML = '<i class="bi bi-info-circle me-1"></i> ' + msg;
+            alertEl.classList.remove('d-none');
+            alertEl.classList.add('d-flex');
+
+            if (!window._secFeedbackTimeouts) window._secFeedbackTimeouts = {};
+            clearTimeout(window._secFeedbackTimeouts[secId]);
+            window._secFeedbackTimeouts[secId] = setTimeout(() => {
+                alertEl.classList.add('d-none');
+                alertEl.classList.remove('d-flex');
+            }, 5000);
+        }
     }
 
     function filterSecUnis(secId) {
@@ -322,6 +573,11 @@
         const noMatch = document.getElementById('sec_no_match_' + secId);
         if (noMatch) {
             noMatch.classList.toggle('d-none', visibleCount > 0);
+        }
+
+        const filterCount = document.getElementById('sec_uni_filter_count_' + secId);
+        if (filterCount) {
+            filterCount.innerText = query ? `Showing ${visibleCount} of ${items.length} institutions` : `Showing all ${items.length} institutions`;
         }
     }
 
@@ -384,6 +640,17 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     });
+
+    const importForm = document.getElementById('bulkQuestionImportForm');
+    if (importForm) {
+        importForm.addEventListener('submit', function () {
+            const btn = document.getElementById('btnSubmitImport');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Importing Questions...';
+            }
+        });
+    }
 });
 </script>
 @endpush

@@ -76,6 +76,49 @@
                     </div>
 
                     <div id="q_universities_container" class="{{ old('scope_type', $currentScopeType ?? 'global') === 'specific' ? '' : 'd-none' }}">
+                        <!-- Affiliating University Quick Selector -->
+                        @php
+                            $affiliatingParents = $universities->where('type', 'university')->where('colleges_count', '>', 0)->sortBy('name');
+                        @endphp
+                        @if($affiliatingParents->isNotEmpty())
+                            <div class="p-2.5 mb-3 bg-white rounded-3 border">
+                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+                                    <label for="qParentUniQuickSelect" class="form-label mb-0 small fw-bold text-primary d-flex align-items-center gap-1">
+                                        <i class="bi bi-diagram-3-fill"></i> Select by Affiliating University (Auto-selects all colleges):
+                                    </label>
+                                    <span class="badge bg-primary-subtle text-primary border" style="font-size: 0.7rem;">
+                                        {{ $affiliatingParents->count() }} Affiliating Universities Available
+                                    </span>
+                                </div>
+                                <div class="row g-2 align-items-center mt-1">
+                                    <div class="col-md-7">
+                                        <select id="qParentUniQuickSelect" class="form-select form-select-sm">
+                                            <option value="">-- Choose Affiliating University... --</option>
+                                            @foreach($affiliatingParents as $pu)
+                                                <option value="{{ $pu->id }}" data-count="{{ $pu->colleges_count }}" data-name="{{ $pu->short_name ?: $pu->name }}">
+                                                    {{ $pu->name }} ({{ $pu->colleges_count }} Affiliated Colleges)
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-5 d-flex gap-1">
+                                        <button type="button" class="btn btn-sm btn-primary py-1 px-2.5 rounded-pill flex-grow-1" onclick="applyQAffiliatingUniversitySelect(true)" style="font-size: 0.78rem;">
+                                            <i class="bi bi-check2-circle me-1"></i> Auto-Select All Colleges
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 rounded-pill" onclick="applyQAffiliatingUniversitySelect(false)" style="font-size: 0.78rem;" title="Deselect colleges under this university">
+                                            <i class="bi bi-dash-circle"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
+                        <!-- Selection Feedback Toast/Alert -->
+                        <div id="qSelectionFeedbackMsg" class="alert alert-info alert-dismissible py-1.5 px-3 mb-2 small d-none align-items-center justify-content-between" role="alert">
+                            <span id="qSelectionFeedbackText"></span>
+                            <button type="button" class="btn-close py-2" onclick="this.parentElement.classList.add('d-none')" aria-label="Close"></button>
+                        </div>
+
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 pb-2 border-bottom">
                             <div>
                                 <small class="text-muted fw-semibold d-block">
@@ -98,18 +141,18 @@
                                 <span class="input-group-text bg-white border-end-0 text-muted">
                                     <i class="bi bi-search"></i>
                                 </span>
-                                <input type="text" id="qUniSearchInput" class="form-control border-start-0" placeholder="Search by university / college name, code..." oninput="filterQUnis()">
+                                <input type="text" id="qUniSearchInput" class="form-control border-start-0" placeholder="Search by university / college name, affiliating parent, code..." oninput="filterQUnis()">
                                 <button class="btn btn-outline-secondary" type="button" onclick="clearQUniSearch()" title="Clear Search">
                                     <i class="bi bi-x-lg"></i>
                                 </button>
                             </div>
                             <div class="d-flex justify-content-between align-items-center mt-1 px-1">
                                 <small class="text-muted" style="font-size: 0.75rem;" id="qUniFilterCount">Showing all {{ count($universities) }} institutions</small>
-                                <small class="text-muted" style="font-size: 0.75rem;" id="qUniSelectedCount">0 selected</small>
+                                <small class="text-muted fw-semibold text-primary" style="font-size: 0.75rem;" id="qUniSelectedCount">0 selected</small>
                             </div>
                         </div>
 
-                        <div class="row g-2 p-2 bg-white rounded-3 border overflow-auto" id="qUniCheckboxList" style="max-height: 220px;">
+                        <div class="row g-2 p-2 bg-white rounded-3 border overflow-auto" id="qUniCheckboxList" style="max-height: 250px;">
                             @foreach($universities as $u)
                                 @php
                                     $typeLabel = '';
@@ -117,15 +160,43 @@
                                     elseif($u->type === 'ini') $typeLabel = 'INI';
                                     elseif($u->type === 'affiliated_college') $typeLabel = 'Affiliated College';
                                     elseif($u->type === 'polytechnic_iti') $typeLabel = 'Polytechnic/ITI';
+
+                                    $parentText = '';
+                                    if($u->parent) {
+                                        $parentText = $u->parent->name . ' ' . ($u->parent->short_name ?? '');
+                                    }
                                 @endphp
-                                <div class="col-md-6 q-uni-item" data-search-text="{{ strtolower($u->name . ' ' . $u->short_name . ' ' . $typeLabel) }}">
-                                    <div class="form-check p-2 rounded hover-bg-light border mb-0 h-100 d-flex align-items-center">
-                                        <input class="form-check-input ms-0 me-2 q-uni-checkbox" type="checkbox" name="university_ids[]" value="{{ $u->id }}" id="q_uni_{{ $u->id }}"
-                                               {{ (in_array($u->id, old('university_ids', $selectedUniversityIds ?? []))) ? 'checked' : '' }} onchange="updateQSelectedCount()">
+                                <div class="col-md-6 q-uni-item" 
+                                     data-search-text="{{ strtolower($u->name . ' ' . $u->short_name . ' ' . $typeLabel . ' ' . $parentText) }}"
+                                     data-parent-id="{{ $u->parent_id ?? '' }}">
+                                    <div class="form-check p-2 rounded hover-bg-light border mb-0 h-100 d-flex align-items-start">
+                                        <input class="form-check-input ms-0 me-2 mt-1 q-uni-checkbox" 
+                                               type="checkbox" 
+                                               name="university_ids[]" 
+                                               value="{{ $u->id }}" 
+                                               id="q_uni_{{ $u->id }}"
+                                               data-is-parent="{{ ($u->colleges_count > 0) ? '1' : '0' }}"
+                                               data-parent-id="{{ $u->parent_id ?? '' }}"
+                                               data-name="{{ $u->short_name ?: $u->name }}"
+                                               data-colleges-count="{{ $u->colleges_count }}"
+                                               {{ (in_array($u->id, old('university_ids', $selectedUniversityIds ?? []))) ? 'checked' : '' }} 
+                                               onchange="handleQUniCheckboxChange(this)">
                                         <label class="form-check-label small w-100 cursor-pointer" for="q_uni_{{ $u->id }}">
-                                            <strong class="text-dark">{{ $u->short_name }}</strong> — <span class="text-secondary">{{ Str::limit($u->name, 35) }}</span>
-                                            @if($typeLabel)
-                                                <span class="badge bg-light text-secondary border ms-1" style="font-size: 0.65rem;">{{ $typeLabel }}</span>
+                                            <div class="d-flex align-items-center flex-wrap gap-1">
+                                                <strong class="text-dark">{{ $u->short_name ?: $u->name }}</strong>
+                                                @if($u->colleges_count > 0)
+                                                    <span class="badge bg-primary-subtle text-primary border" style="font-size: 0.65rem;" title="Checking this will auto-select all {{ $u->colleges_count }} affiliated colleges">
+                                                        <i class="bi bi-diagram-3 me-1"></i>{{ $u->colleges_count }} Colleges
+                                                    </span>
+                                                @elseif($typeLabel)
+                                                    <span class="badge bg-light text-secondary border ms-1" style="font-size: 0.65rem;">{{ $typeLabel }}</span>
+                                                @endif
+                                            </div>
+                                            <span class="text-secondary d-block" style="font-size: 0.78rem;">{{ Str::limit($u->name, 40) }}</span>
+                                            @if($u->parent)
+                                                <small class="text-muted d-block" style="font-size: 0.7rem;">
+                                                    <i class="bi bi-arrow-return-right text-primary me-1"></i>Affiliated to: {{ $u->parent->short_name ?: Str::limit($u->parent->name, 25) }}
+                                                </small>
                                             @endif
                                         </label>
                                     </div>
@@ -149,7 +220,10 @@
 
             <div class="mb-3">
                 <label class="form-label fw-semibold">Question Statement <span class="text-danger">*</span></label>
-                <textarea name="question_text" class="form-control" rows="3" placeholder="Enter the exact question statement..." required>{{ old('question_text', $question->question_text) }}</textarea>
+                <textarea name="question_text" class="form-control @error('question_text') is-invalid @enderror" rows="3" placeholder="Enter the exact question statement..." required>{{ old('question_text', $question->question_text) }}</textarea>
+                @error('question_text')
+                    <div class="invalid-feedback fw-semibold">{{ $message }}</div>
+                @enderror
             </div>
 
             <div class="mb-3">
@@ -160,7 +234,7 @@
             <div class="row g-3 mb-4">
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Question Type <span class="text-danger">*</span></label>
-                    <select name="type" class="form-select" required>
+                    <select name="type" id="questionTypeSelectEdit" class="form-select" required>
                         <option value="single_choice" {{ $question->type == 'single_choice' ? 'selected' : '' }}>Single Choice (Radio)</option>
                         <option value="multiple_choice" {{ $question->type == 'multiple_choice' ? 'selected' : '' }}>Multiple Choice (Checkboxes)</option>
                         <option value="dropdown" {{ $question->type == 'dropdown' ? 'selected' : '' }}>Dropdown Select</option>
@@ -206,9 +280,12 @@
             </div>
 
             <div class="mb-4">
-                <label class="form-label fw-semibold">Options (One per line for Choice/Dropdown types)</label>
-                <textarea name="options_text" class="form-control" rows="5" placeholder="Option 1&#10;Option 2&#10;Option 3&#10;Option 4">{{ old('options_text', $question->options->pluck('option_text')->implode("\n")) }}</textarea>
-                <small class="text-muted">Enter options on separate lines. Leave empty if question type is text or rating.</small>
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label class="form-label fw-semibold mb-0">Options (One per line for Choice/Dropdown/Likert types)</label>
+                    <small class="text-muted">Auto-filled for Likert Scale</small>
+                </div>
+                <textarea name="options_text" id="optionsTextareaEdit" class="form-control" rows="5" placeholder="Option 1&#10;Option 2&#10;Option 3&#10;Option 4">{{ old('options_text', $question->options->pluck('option_text')->implode("\n")) }}</textarea>
+                <small class="text-muted d-block mt-1">Enter options on separate lines. For Likert scale, default 5 points (Strongly Disagree to Strongly Agree) are assigned.</small>
             </div>
 
             <div class="d-flex justify-content-between align-items-center border-top pt-3">
@@ -275,6 +352,72 @@
         }
     }
 
+    function handleQUniCheckboxChange(checkbox) {
+        const isParent = checkbox.getAttribute('data-is-parent') === '1';
+        const uniId = checkbox.value;
+        const isChecked = checkbox.checked;
+
+        if (isParent) {
+            // Auto-select/deselect all colleges under this affiliating university
+            const childCheckboxes = document.querySelectorAll('#qUniCheckboxList .q-uni-checkbox[data-parent-id="' + uniId + '"]');
+            childCheckboxes.forEach(cb => {
+                cb.checked = isChecked;
+            });
+
+            const parentName = checkbox.getAttribute('data-name') || 'University';
+            const count = childCheckboxes.length;
+            if (count > 0) {
+                showQSelectionFeedback((isChecked ? 'Auto-selected ' : 'Deselected ') + parentName + ' and all ' + count + ' affiliated colleges.');
+            }
+        }
+        updateQSelectedCount();
+    }
+
+    function applyQAffiliatingUniversitySelect(selectFlag) {
+        const selectEl = document.getElementById('qParentUniQuickSelect');
+        const parentId = selectEl?.value;
+        if (!parentId) {
+            alert('Please choose an affiliating university from the dropdown first.');
+            return;
+        }
+
+        // Check/uncheck parent university checkbox
+        const parentCheckbox = document.getElementById('q_uni_' + parentId);
+        if (parentCheckbox) {
+            parentCheckbox.checked = selectFlag;
+        }
+
+        // Check/uncheck all child colleges
+        const childCheckboxes = document.querySelectorAll('#qUniCheckboxList .q-uni-checkbox[data-parent-id="' + parentId + '"]');
+        childCheckboxes.forEach(cb => {
+            cb.checked = selectFlag;
+        });
+
+        const selectedOption = selectEl.options[selectEl.selectedIndex];
+        const count = selectedOption.getAttribute('data-count') || childCheckboxes.length;
+        const name = selectedOption.getAttribute('data-name') || 'University';
+
+        showQSelectionFeedback((selectFlag ? 'Auto-selected ' : 'Deselected ') + name + ' and all ' + count + ' affiliated colleges.');
+
+        updateQSelectedCount();
+    }
+
+    function showQSelectionFeedback(msg) {
+        const alertEl = document.getElementById('qSelectionFeedbackMsg');
+        const textEl = document.getElementById('qSelectionFeedbackText');
+        if (alertEl && textEl) {
+            textEl.innerHTML = '<i class="bi bi-info-circle me-1"></i> ' + msg;
+            alertEl.classList.remove('d-none');
+            alertEl.classList.add('d-flex');
+
+            clearTimeout(window._qFeedbackTimeout);
+            window._qFeedbackTimeout = setTimeout(() => {
+                alertEl.classList.add('d-none');
+                alertEl.classList.remove('d-flex');
+            }, 5000);
+        }
+    }
+
     function selectAllQUnis(checked) {
         const visibleItems = document.querySelectorAll('#qUniCheckboxList .q-uni-item:not(.d-none) .q-uni-checkbox');
         visibleItems.forEach(cb => {
@@ -293,6 +436,20 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         updateQSelectedCount();
+
+        const LIKERT_DEFAULT_OPTIONS = "Strongly Disagree\nDisagree\nNeutral\nAgree\nStrongly Agree";
+        const typeSelect = document.getElementById('questionTypeSelectEdit');
+        const optionsArea = document.getElementById('optionsTextareaEdit');
+
+        if (typeSelect && optionsArea) {
+            typeSelect.addEventListener('change', function () {
+                if (this.value === 'likert') {
+                    if (!optionsArea.value.trim()) {
+                        optionsArea.value = LIKERT_DEFAULT_OPTIONS;
+                    }
+                }
+            });
+        }
     });
 </script>
 @endpush
