@@ -1,6 +1,7 @@
 *.log
 .DS_Store
 .env
+.env.example
 .env.backup
 .env.production
 .phpactor.json
@@ -25,8 +26,9 @@ Thumbs.db
 
 *.tmp
 *.swp
-composer.lock
-package-lock.json
+*.composer.lock
+*.composer.json
+*.package-lock.json
 phpunit.xml
 package.json
 .editorconfig
