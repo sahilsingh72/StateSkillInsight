@@ -55,7 +55,7 @@
                         <td>
                             @if($v->file_path)
                                 <audio controls style="height:36px; max-width:240px;">
-                                    <source src="{{ Storage::url($v->file_path) }}" type="{{ $v->mime_type }}">
+                                    <source src="{{ $v->audio_url }}" type="{{ $v->mime_type }}">
                                 </audio>
                             @else
                                 <span class="text-muted small">No file</span>

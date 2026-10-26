@@ -99,11 +99,11 @@
                                             </div>
 
                                             <div class="d-flex align-items-center gap-2">
-                                                <audio controls preload="none" style="height: 36px; max-width: 250px;">
-                                                    <source src="{{ Storage::url($voice->file_path) }}" type="{{ $voice->mime_type ?? 'audio/webm' }}">
+                                                <audio controls preload="metadata" style="height: 36px; max-width: 250px;">
+                                                    <source src="{{ $voice->audio_url }}" type="{{ $voice->mime_type ?? 'audio/webm' }}">
                                                     Your browser does not support audio playback.
                                                 </audio>
-                                                <a href="{{ Storage::url($voice->file_path) }}" download class="btn btn-sm btn-outline-secondary" title="Download Recording">
+                                                <a href="{{ $voice->audio_url }}" download class="btn btn-sm btn-outline-secondary" title="Download Recording">
                                                     <i class="bi bi-download"></i>
                                                 </a>
                                             </div>

@@ -137,8 +137,14 @@
                                     <i class="bi bi-globe me-1"></i> Common (All)
                                 </span>
                             @endif
+                        <td>
+                            <span class="badge bg-info-subtle text-info border">{{ strtoupper(str_replace('_', ' ', $q->type)) }}</span>
+                            @if($q->type === 'multiple_choice' && $q->max_selections)
+                                <span class="badge bg-primary-subtle text-primary border d-block mt-1" style="font-size: 0.65rem;" title="Selection limit">
+                                    <i class="bi bi-check2-square me-1"></i>Max {{ $q->max_selections }}
+                                </span>
+                            @endif
                         </td>
-                        <td><span class="badge bg-info-subtle text-info border">{{ strtoupper($q->type) }}</span></td>
                         <td>
                             <small class="text-secondary">{{ $q->section->category->name ?? 'General' }}</small><br>
                             <small class="text-muted">{{ Str::limit($q->section->title ?? '', 20) }}</small>
