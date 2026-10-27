@@ -64,6 +64,7 @@
             <thead class="bg-light text-secondary small text-uppercase fw-bold">
                 <tr>
                     <th style="width: 50px;">Sno</th>
+                    <th style="width: 80px;" class="text-center">Order</th>
                     <th>Section Title & Details</th>
                     <th>Category</th>
                     <th>Institution Scope</th>
@@ -82,6 +83,11 @@
                     @endphp
                     <tr>
                         <td class="fw-semibold text-muted">{{ ($sections->firstItem() ?? 1) + $loop->index }}</td>
+                        <td class="text-center">
+                            <span class="badge bg-light text-primary border px-2 py-1 fw-bold" title="Section display order sequence">
+                                #{{ $sec->order ?? '-' }}
+                            </span>
+                        </td>
                         <td>
                             <div class="fw-bold text-dark">{{ $sec->title }}</div>
                             @if($sec->description)
@@ -145,7 +151,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="p-5 text-center text-muted">
+                        <td colspan="7" class="p-5 text-center text-muted">
                             <i class="bi bi-folder2-open fs-2 d-block mb-2 text-secondary"></i>
                             No sections found. Click "+ Create New Section" above to add your first section.
                         </td>
@@ -332,15 +338,25 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body p-4">
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Target Category <span class="text-danger">*</span></label>
-                                <select name="category_id" class="form-select" required>
-                                    @foreach($categories as $cat)
-                                        <option value="{{ $cat->id }}" {{ $sec->category_id == $cat->id ? 'selected' : '' }}>
-                                            {{ $cat->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-8">
+                                    <label class="form-label fw-semibold">Target Category <span class="text-danger">*</span></label>
+                                    <select name="category_id" class="form-select" required>
+                                        @foreach($categories as $cat)
+                                            <option value="{{ $cat->id }}" {{ $sec->category_id == $cat->id ? 'selected' : '' }}>
+                                                {{ $cat->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Display Order</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white"><i class="bi bi-sort-numeric-down"></i></span>
+                                        <input type="number" name="order" class="form-control" min="1" placeholder="e.g. 1" value="{{ old('order', $sec->order) }}">
+                                    </div>
+                                    <small class="text-muted" style="font-size: 0.72rem;">Survey display sequence</small>
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Section Title <span class="text-danger">*</span></label>
@@ -543,14 +559,24 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Choose Target Category <span class="text-danger">*</span></label>
-                        <select name="category_id" class="form-select" required>
-                            <option value="">-- Select Category --</option>
-                            @foreach($categories as $cat)
-                                <option value="{{ $cat->id }}">{{ $cat->name }} ({{ $cat->code }})</option>
-                            @endforeach
-                        </select>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">Choose Target Category <span class="text-danger">*</span></label>
+                            <select name="category_id" class="form-select" required>
+                                <option value="">-- Select Category --</option>
+                                @foreach($categories as $cat)
+                                    <option value="{{ $cat->id }}">{{ $cat->name }} ({{ $cat->code }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Display Order</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="bi bi-sort-numeric-down"></i></span>
+                                <input type="number" name="order" class="form-control" min="1" placeholder="Auto" value="{{ old('order') }}">
+                            </div>
+                            <small class="text-muted" style="font-size: 0.72rem;">Leave empty to auto-assign</small>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Section Title <span class="text-danger">*</span></label>

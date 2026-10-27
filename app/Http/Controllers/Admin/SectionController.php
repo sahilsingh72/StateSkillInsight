@@ -93,7 +93,7 @@ class SectionController extends Controller
             $query->where('title', 'LIKE', '%' . $request->search . '%');
         }
 
-        $sections = $query->orderBy('order')->paginate(20)->withQueryString();
+        $sections = $query->orderBy('order')->orderBy('id')->paginate(20)->withQueryString();
         $categories = SurveyCategory::all();
         $universities = University::with(['colleges', 'parent'])->withCount('colleges')->orderBy('name')->get();
 
@@ -129,6 +129,13 @@ class SectionController extends Controller
             $validated['university_id'] = null;
         }
 
+        if (empty($validated['order'])) {
+            $maxOrder = SurveySection::where('category_id', $validated['category_id'])->max('order') ?? 0;
+            $validated['order'] = $maxOrder + 1;
+        } else {
+            $validated['order'] = (int) $validated['order'];
+        }
+
         $section = SurveySection::create($validated);
 
         if ($scopeType === 'specific' && !empty($selectedIds)) {
@@ -162,10 +169,17 @@ class SectionController extends Controller
             'category_id' => 'required|exists:survey_categories,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'order' => 'nullable|integer|min:1',
             'scope_type' => 'nullable|in:global,specific',
             'university_ids' => 'nullable|array',
             'university_ids.*' => 'exists:universities,id',
         ]);
+
+        if ($request->filled('order')) {
+            $validated['order'] = (int) $request->input('order');
+        } else {
+            $validated['order'] = $section->order ?: 1;
+        }
 
         $scopeType = $request->input('scope_type', 'global');
         $selectedIds = [];
