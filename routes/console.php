@@ -9,4 +9,5 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('survey:send-reminders')->everyFiveMinutes();
+Schedule::command('onedrive:sync-pending')->everyFiveMinutes();
 

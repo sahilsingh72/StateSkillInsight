@@ -38,6 +38,13 @@ class Question extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function getMaxSelectionsAttribute(): ?int
+    {
+        return isset($this->settings['max_selections']) && is_numeric($this->settings['max_selections']) && $this->settings['max_selections'] > 0
+            ? (int) $this->settings['max_selections']
+            : null;
+    }
+
     public function canBeEditedBy(?User $user): bool
     {
         if (!$user) {

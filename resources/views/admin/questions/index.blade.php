@@ -137,8 +137,14 @@
                                     <i class="bi bi-globe me-1"></i> Common (All)
                                 </span>
                             @endif
+                        <td>
+                            <span class="badge bg-info-subtle text-info border">{{ strtoupper(str_replace('_', ' ', $q->type)) }}</span>
+                            @if($q->type === 'multiple_choice' && $q->max_selections)
+                                <span class="badge bg-primary-subtle text-primary border d-block mt-1" style="font-size: 0.65rem;" title="Selection limit">
+                                    <i class="bi bi-check2-square me-1"></i>Max {{ $q->max_selections }}
+                                </span>
+                            @endif
                         </td>
-                        <td><span class="badge bg-info-subtle text-info border">{{ strtoupper($q->type) }}</span></td>
                         <td>
                             <small class="text-secondary">{{ $q->section->category->name ?? 'General' }}</small><br>
                             <small class="text-muted">{{ Str::limit($q->section->title ?? '', 20) }}</small>
@@ -205,15 +211,25 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Choose Target Category <span class="text-danger">*</span></label>
-                        <select name="category_id" class="form-select border-primary" required>
-                            <option value="">-- Select Category --</option>
-                            @foreach($categories as $cat)
-                                <option value="{{ $cat->id }}">{{ $cat->name }} ({{ $cat->code }})</option>
-                            @endforeach
-                        </select>
-                        <small class="text-muted d-block mt-1">Select the category in which this new section will be created.</small>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">Choose Target Category <span class="text-danger">*</span></label>
+                            <select name="category_id" class="form-select border-primary" required>
+                                <option value="">-- Select Category --</option>
+                                @foreach($categories as $cat)
+                                    <option value="{{ $cat->id }}">{{ $cat->name }} ({{ $cat->code }})</option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted d-block mt-1">Select the category for this section.</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Display Order</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="bi bi-sort-numeric-down"></i></span>
+                                <input type="number" name="order" class="form-control" min="1" placeholder="Auto" value="{{ old('order') }}">
+                            </div>
+                            <small class="text-muted d-block mt-1">Leave empty for auto</small>
+                        </div>
                     </div>
                     @if(auth()->check() && auth()->user()->isSuperAdmin())
                         <div class="mb-3 p-3 bg-light rounded-3 border">

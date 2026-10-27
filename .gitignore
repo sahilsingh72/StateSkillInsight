@@ -1,6 +1,7 @@
 *.log
 .DS_Store
 .env
+.env.example
 .env.backup
 .env.production
 .phpactor.json
@@ -22,3 +23,14 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+*.tmp
+*.swp
+*.composer.lock
+*.composer.json
+*.package-lock.json
+phpunit.xml
+package.json
+.editorconfig
+.gitattributes
+artisan

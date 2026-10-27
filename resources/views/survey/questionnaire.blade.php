@@ -158,6 +158,11 @@
                                     <span class="text-danger" title="Required Question">*</span>
                                     <span class="badge bg-danger-subtle text-danger border ms-1" style="font-size:0.65rem;">Required</span>
                                 @endif
+                                @if($q->type === 'multiple_choice' && $q->max_selections)
+                                    <span class="badge bg-primary-subtle text-primary border ms-1" style="font-size:0.68rem;" title="Selection limit">
+                                        <i class="bi bi-check2-square me-1"></i>Max {{ $q->max_selections }}
+                                    </span>
+                                @endif
                             </h6>
                             @if($q->help_text)
                                 <small class="text-muted"><i class="bi bi-info-circle me-1"></i> {{ $q->help_text }}</small>
@@ -187,7 +192,21 @@
                             </div>
 
                         @elseif($q->type === 'multiple_choice')
-                            <div class="d-flex flex-column gap-2">
+                            @php
+                                $maxSel = $q->max_selections;
+                            @endphp
+                            @if($maxSel)
+                                <div class="alert alert-info py-2 px-3 small rounded-3 d-flex align-items-center justify-content-between mb-3 border-info-subtle bg-info-subtle text-info-emphasis" id="maxSelAlert_{{ $q->id }}">
+                                    <span>
+                                        <i class="bi bi-info-circle-fill me-1"></i>
+                                        Please select up to <strong>{{ $maxSel }}</strong> {{ Str::plural('option', $maxSel) }}.
+                                    </span>
+                                    <span class="badge bg-white text-primary border fw-semibold" id="maxSelCounter_{{ $q->id }}">
+                                        0 / {{ $maxSel }} selected
+                                    </span>
+                                </div>
+                            @endif
+                            <div class="d-flex flex-column gap-2 mc-container" id="mc_container_{{ $q->id }}" data-question-id="{{ $q->id }}" data-max="{{ $maxSel ?? '' }}">
                                 @foreach($q->options as $opt)
                                     @php
                                         $resp = $existingResponses[$q->id] ?? null;
@@ -201,9 +220,17 @@
                                         }
                                         $isChecked = in_array((string)$opt->value, $arrVals) || in_array((string)$opt->option_text, $arrVals);
                                     @endphp
-                                    <div class="form-check p-3 rounded-3 border">
-                                        <input class="form-check-input q-input" type="checkbox" name="answers[{{ $q->id }}][]" id="opt_{{ $opt->id }}" value="{{ $opt->value }}" {{ $isChecked ? 'checked' : '' }}>
-                                        <label class="form-check-label w-100" for="opt_{{ $opt->id }}">
+                                    <div class="form-check p-3 rounded-3 border option-hover" style="cursor:pointer;">
+                                        <input class="form-check-input q-input mc-checkbox" 
+                                               type="checkbox" 
+                                               name="answers[{{ $q->id }}][]" 
+                                               id="opt_{{ $opt->id }}" 
+                                               value="{{ $opt->value }}" 
+                                               data-question-id="{{ $q->id }}"
+                                               data-max="{{ $maxSel ?? '' }}"
+                                               {{ $isChecked ? 'checked' : '' }}
+                                               onchange="handleMultipleChoiceLimit(this)">
+                                        <label class="form-check-label w-100" for="opt_{{ $opt->id }}" style="cursor:pointer;">
                                             {{ $opt->option_text }}
                                         </label>
                                     </div>
@@ -249,7 +276,7 @@
                             @php
                                 $existingResp = $existingResponses[$q->id] ?? null;
                                 $existingVoice = $existingResp?->voiceResponse;
-                                $existingAudioUrl = $existingVoice ? Storage::url($existingVoice->file_path) : null;
+                                $existingAudioUrl = $existingVoice ? $existingVoice->audio_url : null;
                                 $hasAudio = !empty($existingAudioUrl) || ($existingResp && Str::contains($existingResp->text_value ?? '', 'Voice Recording'));
                             @endphp
                             <div class="voice-recorder-card p-3 p-md-4 rounded-4 border bg-light position-relative" id="voiceCard_{{ $q->id }}">
@@ -386,6 +413,62 @@
                 if (errEl) errEl.classList.add('d-none');
             }
             triggerAutoSave();
+        });
+    });
+
+    // Multiple Choice Selection Limit Handler
+    function handleMultipleChoiceLimit(checkbox) {
+        const qId = checkbox.dataset.questionId;
+        const max = parseInt(checkbox.dataset.max, 10);
+        if (!max || isNaN(max)) return true;
+
+        const container = document.getElementById(`mc_container_${qId}`);
+        if (!container) return true;
+
+        const checkedBoxes = container.querySelectorAll('.mc-checkbox:checked');
+        const alertEl = document.getElementById(`maxSelAlert_${qId}`);
+
+        if (checkedBoxes.length > max) {
+            checkbox.checked = false;
+
+            if (alertEl) {
+                alertEl.classList.remove('bg-info-subtle', 'text-info-emphasis', 'border-info-subtle');
+                alertEl.classList.add('bg-danger-subtle', 'text-danger-emphasis', 'border-danger-subtle');
+
+                alertEl.innerHTML = `<span><i class="bi bi-exclamation-triangle-fill me-1"></i> You can select a maximum of <strong>${max}</strong> options.</span><span class="badge bg-danger text-white">${max} / ${max} selected</span>`;
+
+                clearTimeout(window['_mc_timeout_' + qId]);
+                window['_mc_timeout_' + qId] = setTimeout(() => {
+                    alertEl.classList.remove('bg-danger-subtle', 'text-danger-emphasis', 'border-danger-subtle');
+                    alertEl.classList.add('bg-info-subtle', 'text-info-emphasis', 'border-info-subtle');
+                    updateMcCounter(qId, max);
+                }, 3000);
+            }
+            return false;
+        }
+
+        updateMcCounter(qId, max);
+        return true;
+    }
+
+    function updateMcCounter(qId, max) {
+        const container = document.getElementById(`mc_container_${qId}`);
+        if (!container) return;
+        const checkedCount = container.querySelectorAll('.mc-checkbox:checked').length;
+        const alertEl = document.getElementById(`maxSelAlert_${qId}`);
+        if (alertEl && max) {
+            const badgeClass = (checkedCount === max) ? 'badge bg-success text-white border fw-semibold' : 'badge bg-white text-primary border fw-semibold';
+            alertEl.innerHTML = `<span><i class="bi bi-info-circle-fill me-1"></i> Please select up to <strong>${max}</strong> ${max === 1 ? 'option' : 'options'}.</span><span class="${badgeClass}" id="maxSelCounter_${qId}">${checkedCount} / ${max} selected</span>`;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.mc-container[data-max]').forEach(container => {
+            const max = parseInt(container.dataset.max, 10);
+            const qId = container.dataset.questionId;
+            if (max && !isNaN(max) && qId) {
+                updateMcCounter(qId, max);
+            }
         });
     });
 

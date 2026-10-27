@@ -394,6 +394,9 @@ class PublicSurveyController extends Controller
             $jsonVal = null;
 
             if (is_array($val)) {
+                if ($question->max_selections && count($val) > $question->max_selections) {
+                    $val = array_slice($val, 0, $question->max_selections);
+                }
                 $jsonVal = $val;
                 $textVal = implode(', ', $val);
             } else {

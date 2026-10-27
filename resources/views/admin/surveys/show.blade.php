@@ -317,9 +317,19 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Section Title <span class="text-danger">*</span></label>
-                        <input type="text" name="title" class="form-control" placeholder="e.g. Demographics / Technical Skills" required>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">Section Title <span class="text-danger">*</span></label>
+                            <input type="text" name="title" class="form-control" placeholder="e.g. Demographics / Technical Skills" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Display Order</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="bi bi-sort-numeric-down"></i></span>
+                                <input type="number" name="order" class="form-control" min="1" placeholder="Auto" value="{{ old('order') }}">
+                            </div>
+                            <small class="text-muted" style="font-size: 0.72rem;">Leave empty for auto</small>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Description</label>

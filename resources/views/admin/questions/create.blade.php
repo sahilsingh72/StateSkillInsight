@@ -231,6 +231,37 @@
                 </div>
             </div>
 
+            <!-- Max Selections Limit (Shown only for Multiple Choice) -->
+            <div id="maxSelectionsContainer" class="p-3 mb-4 rounded-3 border bg-light {{ old('type') === 'multiple_choice' ? '' : 'd-none' }}" style="border-left: 4px solid #0d6efd !important;">
+                <div class="row align-items-center g-3">
+                    <div class="col-md-8">
+                        <label for="max_selections_input" class="form-label fw-bold mb-1 text-primary">
+                            <i class="bi bi-ui-checks-grid me-1"></i> Maximum Allowed Selections (Optional)
+                        </label>
+                        <p class="text-muted small mb-0">
+                            Specify the maximum number of options a respondent can select (e.g. <strong>3, 4, or 5</strong>). If left blank, respondents can select any number of options.
+                        </p>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white"><i class="bi bi-123"></i></span>
+                            <input type="number" 
+                                   name="max_selections" 
+                                   id="max_selections_input" 
+                                   class="form-control @error('max_selections') is-invalid @enderror" 
+                                   min="1" 
+                                   max="50" 
+                                   placeholder="e.g. 4" 
+                                   value="{{ old('max_selections') }}">
+                            <span class="input-group-text bg-white text-muted">options</span>
+                        </div>
+                        @error('max_selections')
+                            <div class="text-danger small mt-1">{{ $message }}</div>
+                        @enderror
+                    </div>
+                </div>
+            </div>
+
             <div class="row g-3 mb-4">
                 <div class="col-md-6">
                     <div class="form-check form-switch p-3 bg-light rounded-3 border h-100">
@@ -279,17 +310,27 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Choose Target Category <span class="text-danger">*</span></label>
-                        <select name="category_id" class="form-select border-primary" required>
-                            <option value="">-- Select Category --</option>
-                            @if(isset($categories))
-                                @foreach($categories as $cat)
-                                    <option value="{{ $cat->id }}">{{ $cat->name }} ({{ $cat->code }})</option>
-                                @endforeach
-                            @endif
-                        </select>
-                        <small class="text-muted d-block mt-1">Select the category in which this new section will be created.</small>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">Choose Target Category <span class="text-danger">*</span></label>
+                            <select name="category_id" class="form-select border-primary" required>
+                                <option value="">-- Select Category --</option>
+                                @if(isset($categories))
+                                    @foreach($categories as $cat)
+                                        <option value="{{ $cat->id }}">{{ $cat->name }} ({{ $cat->code }})</option>
+                                    @endforeach
+                                @endif
+                            </select>
+                            <small class="text-muted d-block mt-1">Select the category for this section.</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Display Order</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="bi bi-sort-numeric-down"></i></span>
+                                <input type="number" name="order" class="form-control" min="1" placeholder="Auto" value="{{ old('order') }}">
+                            </div>
+                            <small class="text-muted d-block mt-1">Leave empty for auto</small>
+                        </div>
                     </div>
                     @if(auth()->check() && auth()->user()->isSuperAdmin())
                         <div class="mb-3 p-3 bg-light rounded-3 border">
@@ -711,21 +752,35 @@
         const LIKERT_DEFAULT_OPTIONS = "Strongly Disagree\nDisagree\nNeutral\nAgree\nStrongly Agree";
         const typeSelect = document.getElementById('questionTypeSelect');
         const optionsArea = document.getElementById('optionsTextarea');
+        const maxSelContainer = document.getElementById('maxSelectionsContainer');
 
-        if (typeSelect && optionsArea) {
+        function toggleMaxSelections() {
+            if (maxSelContainer && typeSelect) {
+                if (typeSelect.value === 'multiple_choice') {
+                    maxSelContainer.classList.remove('d-none');
+                } else {
+                    maxSelContainer.classList.add('d-none');
+                }
+            }
+        }
+
+        if (typeSelect) {
             typeSelect.addEventListener('change', function () {
-                if (this.value === 'likert') {
+                toggleMaxSelections();
+                if (this.value === 'likert' && optionsArea) {
                     if (!optionsArea.value.trim() || optionsArea.dataset.autoFilled === 'true') {
                         optionsArea.value = LIKERT_DEFAULT_OPTIONS;
                         optionsArea.dataset.autoFilled = 'true';
                     }
-                } else if (optionsArea.dataset.autoFilled === 'true') {
+                } else if (optionsArea && optionsArea.dataset.autoFilled === 'true') {
                     optionsArea.value = '';
                     optionsArea.dataset.autoFilled = 'false';
                 }
             });
 
-            if (typeSelect.value === 'likert' && !optionsArea.value.trim()) {
+            toggleMaxSelections();
+
+            if (optionsArea && typeSelect.value === 'likert' && !optionsArea.value.trim()) {
                 optionsArea.value = LIKERT_DEFAULT_OPTIONS;
                 optionsArea.dataset.autoFilled = 'true';
             }

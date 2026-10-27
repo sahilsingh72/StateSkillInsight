@@ -130,6 +130,7 @@ class QuestionController extends Controller
             'type' => 'required|string',
             'is_required' => 'nullable|boolean',
             'is_active' => 'nullable|boolean',
+            'max_selections' => 'nullable|integer|min:1|max:50',
             'dimension_id' => 'nullable|exists:psychometric_dimensions,id',
             'scope_type' => 'nullable|in:global,specific',
             'university_ids' => 'nullable|array',
@@ -165,6 +166,13 @@ class QuestionController extends Controller
                 'question_text' => "A question with this statement already exists in the '{$catName}' category. Duplicate questions in the same category are not allowed."
             ]);
         }
+
+        $settings = [];
+        if ($request->input('type') === 'multiple_choice' && $request->filled('max_selections')) {
+            $settings['max_selections'] = (int) $request->input('max_selections');
+        }
+        $validated['settings'] = !empty($settings) ? $settings : null;
+        unset($validated['max_selections']);
 
         $question = Question::create($validated);
 
@@ -258,6 +266,7 @@ class QuestionController extends Controller
             'type' => 'required|string',
             'is_required' => 'nullable|boolean',
             'is_active' => 'nullable|boolean',
+            'max_selections' => 'nullable|integer|min:1|max:50',
             'dimension_id' => 'nullable|exists:psychometric_dimensions,id',
             'scope_type' => 'nullable|in:global,specific',
             'university_ids' => 'nullable|array',
@@ -299,6 +308,15 @@ class QuestionController extends Controller
         if ($request->has('is_active')) {
             $validated['is_active'] = $request->boolean('is_active');
         }
+
+        $settings = $question->settings ?? [];
+        if ($request->input('type') === 'multiple_choice' && $request->filled('max_selections')) {
+            $settings['max_selections'] = (int) $request->input('max_selections');
+        } else {
+            unset($settings['max_selections']);
+        }
+        $validated['settings'] = !empty($settings) ? $settings : null;
+        unset($validated['max_selections']);
 
         $question->update($validated);
 

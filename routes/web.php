@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\ExportController;
 use App\Http\Controllers\Admin\InvitationController;
 use App\Http\Controllers\Admin\QuestionController;
 use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\OneDriveController;
 use App\Http\Controllers\Admin\RespondentController;
 use App\Http\Controllers\Admin\SectionController;
 use App\Http\Controllers\Admin\SurveyController;
@@ -115,6 +116,10 @@ Route::middleware(['auth'])->group(function () {
         // User & Role Management
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
+
+        Route::get('/onedrive/login', [OneDriveController::class, 'redirectToProvider'])->name('onedrive.login');
+        Route::get('/onedrive/callback', [OneDriveController::class, 'handleCallback'])->name('onedrive.callback');
+        Route::get('/onedrive/preview', [OneDriveController::class, 'previewFiles'])->name('onedrive.preview');
     });
 });
 
